@@ -146,7 +146,6 @@ public class Mappings {
 
             VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_FILE);
             boolean isSplit = tree.getNamespaceId("clientOfficial") != MappingTreeView.NULL_NAMESPACE_ID;
-            System.out.println(isSplit + " " + versionData.id);
 
             return MappingUtil.fromMappingTree(tree, isSplit ? "clientOfficial" : "official", "named");
         } catch (IOException e) {

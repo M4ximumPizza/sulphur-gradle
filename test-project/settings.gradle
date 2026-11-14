@@ -7,6 +7,10 @@ pluginManagement {
             url = 'https://maven.fabricmc.net/'
         }
         maven {
+            name = 'PuzzlesHQ'
+            url = 'https://maven.puzzleshq.dev/releases/'
+        }
+        maven {
             url = "https://jitpack.io"
         }
     }

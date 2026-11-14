@@ -48,8 +48,8 @@ public class Configurations {
         File depsFile = new File(FileUtil.getSlimeCache(p), name + "-" + version + "-manifest.json");
         File depsFileEpoc = new File(FileUtil.getSlimeCache(p), name + "-" + version + "-manifest.epoc");
 
-        boolean refreshManifest = !fileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(fileEpoc.toPath()))) >= VersionResolver.HOUR;
-        boolean refreshDepsManifest = !depsFileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(depsFileEpoc.toPath()))) >= VersionResolver.HOUR;
+        boolean refreshManifest = !file.exists() || !fileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(fileEpoc.toPath()))) >= VersionResolver.HOUR;
+        boolean refreshDepsManifest = !depsFile.exists() || !depsFileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(depsFileEpoc.toPath()))) >= VersionResolver.HOUR;
 
         String manifestData;
         if (refreshManifest) {
