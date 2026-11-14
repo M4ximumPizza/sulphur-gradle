@@ -30,4 +30,23 @@ public class VersionData {
         if (time != null) return time;
         return null;
     }
+
+    @Override
+    public String toString() {
+        return "VersionData{" +
+                "id='" + id + '\'' +
+                ", mainClass='" + mainClass + '\'' +
+                ", releaseTime='" + releaseTime + '\'' +
+                ", time='" + time + '\'' +
+                ", type='" + type + '\'' +
+                ", javaVersion=" + javaVersion +
+                ", downloads=" + downloads +
+                ", assetIndex=" + assetIndex +
+                ", assets='" + assets + '\'' +
+                ", libraries=" + Arrays.toString(libraries) +
+                ", logging=" + logging +
+                ", minecraftArguments='" + minecraftArguments + '\'' +
+                ", arguments=" + arguments +
+                '}';
+    }
 }

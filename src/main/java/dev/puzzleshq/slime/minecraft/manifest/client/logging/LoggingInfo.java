@@ -6,4 +6,12 @@ public class LoggingInfo {
     public LoggingFile file;
     public String type;
 
+    @Override
+    public String toString() {
+        return "LoggingInfo{" +
+                "argument='" + argument + '\'' +
+                ", file=" + file +
+                ", type='" + type + '\'' +
+                '}';
+    }
 }

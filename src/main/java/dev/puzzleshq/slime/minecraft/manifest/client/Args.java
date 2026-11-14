@@ -8,4 +8,11 @@ public class Args {
     public JsonArray game;
     public JsonArray jvm;
 
+    @Override
+    public String toString() {
+        return "Args{" +
+                "game=" + game +
+                ", jvm=" + jvm +
+                '}';
+    }
 }

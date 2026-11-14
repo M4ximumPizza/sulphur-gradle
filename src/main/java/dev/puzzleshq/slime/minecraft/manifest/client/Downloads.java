@@ -16,4 +16,13 @@ public class Downloads {
         return server != null;
     }
 
+    @Override
+    public String toString() {
+        return "Downloads{" +
+                "client=" + client +
+                ", server=" + server +
+                ", client_mappings=" + client_mappings +
+                ", server_mappings=" + server_mappings +
+                '}';
+    }
 }

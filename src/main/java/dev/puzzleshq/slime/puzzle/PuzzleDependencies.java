@@ -9,4 +9,13 @@ public class PuzzleDependencies {
     public List<PuzzleDependency> server;
     public List<PuzzleRepo> repos;
 
+    @Override
+    public String toString() {
+        return "PuzzleDependencies{" +
+                "client=" + client +
+                ", common=" + common +
+                ", server=" + server +
+                ", repos=" + repos +
+                '}';
+    }
 }

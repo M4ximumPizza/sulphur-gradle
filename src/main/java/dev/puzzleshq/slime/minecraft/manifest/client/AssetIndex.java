@@ -10,4 +10,14 @@ public class AssetIndex {
     public long totalSize;
     public URL url;
 
+    @Override
+    public String toString() {
+        return "AssetIndex{" +
+                "id='" + id + '\'' +
+                ", sha1='" + sha1 + '\'' +
+                ", size=" + size +
+                ", totalSize=" + totalSize +
+                ", url=" + url +
+                '}';
+    }
 }

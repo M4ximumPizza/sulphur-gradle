@@ -8,4 +8,12 @@ public class DownloadInfo {
     public long size;
     public URL url;
 
+    @Override
+    public String toString() {
+        return "DownloadInfo{" +
+                "sha1='" + sha1 + '\'' +
+                ", size=" + size +
+                ", url=" + url +
+                '}';
+    }
 }

@@ -7,5 +7,13 @@ public class LoggingFile {
     public int size;
     public String url;
 
-
+    @Override
+    public String toString() {
+        return "LoggingFile{" +
+                "id='" + id + '\'' +
+                ", sha1='" + sha1 + '\'' +
+                ", size=" + size +
+                ", url='" + url + '\'' +
+                '}';
+    }
 }

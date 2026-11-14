@@ -8,4 +8,14 @@ public class PuzzleDependency {
     public String classifier;
     public String type;
 
+    @Override
+    public String toString() {
+        return "PuzzleDependency{" +
+                "groupId='" + groupId + '\'' +
+                ", artifactId='" + artifactId + '\'' +
+                ", version='" + version + '\'' +
+                ", classifier='" + classifier + '\'' +
+                ", type='" + type + '\'' +
+                '}';
+    }
 }
