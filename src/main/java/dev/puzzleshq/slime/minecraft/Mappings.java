@@ -100,6 +100,56 @@ public class Mappings {
         }
     }
 
+    private static final String legacyYarnMappingUrl = "https://repo.legacyfabric.net/legacyfabric/net/legacyfabric/legacy-yarn/";
+
+    public static IMapping getLegacyYarnMappings(Project project, VersionData versionData, String yarnBuild) {
+        try {
+            String mappingId = versionData.id + "+" + yarnBuild;
+            String tinyFileName = "legacy-yarn-" + mappingId;
+
+            URL finalUrl = URI.create(legacyYarnMappingUrl + mappingId + "/" + tinyFileName + ".jar").toURL();
+
+            File tinyFile = new File(FileUtil.getMappingsDir(project), tinyFileName + ".txt");
+            if (tinyFile.exists()) {
+                String mappingsData = new String(Files.readAllBytes(tinyFile.toPath()));
+
+                VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_FILE);
+                return MappingUtil.fromMappingTree(tree, "official", "named");
+            }
+
+            File mappingsFile = new File(FileUtil.getMappingsDir(project), new File(tinyFileName + ".jar").getName());
+            if (!mappingsFile.exists()) {
+                mappingsFile.createNewFile();
+                try (InputStream stream = finalUrl.openStream()) {
+                    byte[] bytes = JavaUtils.readAllBytes(stream);
+                    Files.write(mappingsFile.toPath(), bytes);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            String mappingsData;
+            try (ZipFile zip = new ZipFile(mappingsFile)) {
+                ZipEntry entry = zip.getEntry("mappings/mappings.tiny");
+
+                try (InputStream stream = zip.getInputStream(entry)) {
+                    FileOutputStream outputStream = new FileOutputStream(tinyFile);
+                    byte[] bytes = JavaUtils.readAllBytes(stream);
+                    mappingsData = new String(bytes);
+                    outputStream.write(bytes);
+                    outputStream.close();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_FILE);
+            return MappingUtil.fromMappingTree(tree, "official", "named");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static final String orinthemcMappingUrl = "https://maven.ornithemc.net/releases/net/ornithemc/feather-gen2/";
 
     public static IMapping getOrinthemcMappings(Project project, VersionData versionData, String ornithemcBuild) {

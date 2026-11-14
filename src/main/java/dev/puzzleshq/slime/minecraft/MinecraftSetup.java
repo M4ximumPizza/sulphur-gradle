@@ -56,6 +56,7 @@ public class MinecraftSetup {
             case "none": return null;
             case "official": return Mappings.getOfficialMappings(project, versionData);
             case "yarn": return Mappings.getYarnMappings(project, versionData, sourceParts[1]);
+            case "legacy-yarn": return Mappings.getLegacyYarnMappings(project, versionData, sourceParts[1]);
             case "ornithemc": return Mappings.getOrinthemcMappings(project, versionData, sourceParts[1]);
             default: throw new IllegalArgumentException("Unknown mapping type '" + config.mappingsSource.get() + "'");
         }

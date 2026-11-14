@@ -16,6 +16,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class VersionResolver {
@@ -30,21 +31,22 @@ public class VersionResolver {
         MinecraftConfig config = pair.getConfig().minecraft;
         String manifestSource = config.manifestSource.get();
 
-        long lastModified = config.timeSinceManifestUpdate.get();
-
         Gson gson = GSON_LOCAL.get();
 
         try {
             URL url = URI.create(manifestSource).toURL();
+            File fileEpoc = new File(FileUtil.getSlimeCache(project), Paths.get(url.getFile()).getFileName().toFile().getName() + ".epoc");
             File file = new File(FileUtil.getSlimeCache(project), Paths.get(url.getFile()).getFileName().toFile().getName());
             long current = System.currentTimeMillis();
-            if (current - lastModified >= VersionResolver.HOUR || lastModified == -1L || !file.exists()) {
+            if (!file.exists() || !fileEpoc.exists() || (current - Long.parseLong(new String(Files.readAllBytes(fileEpoc.toPath())))) >= VersionResolver.HOUR) {
+                Files.write(fileEpoc.toPath(), String.valueOf(current).getBytes(StandardCharsets.UTF_8));
                 file.createNewFile();
+
                 String manifestData;
                 try (InputStream stream = url.openStream()) {
                     manifestData = new String(JavaUtils.readAllBytes(stream), StandardCharsets.UTF_8);
                 }
-                config.timeSinceManifestUpdate.set(current);
+
                 pair.getSpec().save();
                 FileWriter fileWriter = new FileWriter(file, false);
                 fileWriter.write(manifestData);
@@ -66,12 +68,11 @@ public class VersionResolver {
     }
 
     public static VersionData getClientJson(Project project, Version version) {
-        File slimeCache = new File(FileUtil.getSlimeCache(project), "manifests");
-        if (!slimeCache.exists()) slimeCache.mkdirs();
-
         Gson gson = GSON_LOCAL.get();
         try {
-            File file = new File(slimeCache, Paths.get(version.url.getFile()).getFileName().toFile().getName());
+            File file = new File(FileUtil.getMinecraftManifests(project), Paths.get(version.url.getFile()).getFileName().toFile().getName());
+            if (!file.getParentFile().exists())
+                file.getParentFile().mkdirs();
             if (!file.exists()) {
                 file.createNewFile();
                 String manifestData;
@@ -96,4 +97,22 @@ public class VersionResolver {
 
     }
 
+    public static void deleteManifestFiles(Project project) {
+        MinecraftConfig config = SlimeConfig.get(project).getConfig().minecraft;
+        String manifestSource = config.manifestSource.get();
+
+        try {
+            URL url = URI.create(manifestSource).toURL();
+
+            File fileEpoc = new File(FileUtil.getSlimeCache(project), Paths.get(url.getFile()).getFileName().toFile().getName() + ".epoc");
+            File file = new File(FileUtil.getSlimeCache(project), Paths.get(url.getFile()).getFileName().toFile().getName());
+            file.delete();
+            fileEpoc.delete();
+
+            FileUtil.delete(FileUtil.getMinecraftManifests(project));
+            FileUtil.delete(FileUtil.getPuzzleManifests(project));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

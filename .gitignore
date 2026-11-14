@@ -38,3 +38,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+./test-project/run/**
+./test-project/slime-config.toml

@@ -43,10 +43,10 @@ public class Configurations {
     }
 
     private static void getLoaderDeps(Project p, RepositoryHandler repositories, DependencyHandler dependencies, String name, String version, String classifier) throws IOException {
-        File file = new File(FileUtil.getSlimeCache(p), name + "-manifest.json");
-        File fileEpoc = new File(FileUtil.getSlimeCache(p), name + "-manifest.epoc");
-        File depsFile = new File(FileUtil.getSlimeCache(p), name + "-" + version + "-manifest.json");
-        File depsFileEpoc = new File(FileUtil.getSlimeCache(p), name + "-" + version + "-manifest.epoc");
+        File file = new File(FileUtil.getPuzzleManifests(p), name + "-manifest.json");
+        File fileEpoc = new File(FileUtil.getPuzzleManifests(p), name + "-manifest.epoc");
+        File depsFile = new File(FileUtil.getPuzzleManifests(p), name + "-" + version + "-manifest.json");
+        File depsFileEpoc = new File(FileUtil.getPuzzleManifests(p), name + "-" + version + "-manifest.epoc");
 
         boolean refreshManifest = !file.exists() || !fileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(fileEpoc.toPath()))) >= VersionResolver.HOUR;
         boolean refreshDepsManifest = !depsFile.exists() || !depsFileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(depsFileEpoc.toPath()))) >= VersionResolver.HOUR;

@@ -3,14 +3,12 @@ package dev.puzzleshq.slime;
 import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.slime.config.SlimeConfig;
 import dev.puzzleshq.slime.minecraft.MinecraftSetup;
-import dev.puzzleshq.slime.tasks.RunClientTask;
-import dev.puzzleshq.slime.tasks.RunServerTask;
+import dev.puzzleshq.slime.tasks.Tasks;
 import dev.puzzleshq.slime.util.FileUtil;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.tasks.TaskContainer;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
@@ -58,9 +56,7 @@ public class SlimePlugin implements Plugin<@NotNull Project> {
             });
         });
 
-        TaskContainer tasks = target.getTasks();
-        tasks.register("runClient", RunClientTask.class);
-        tasks.register("runServer", RunServerTask.class);
+        Tasks.add(target.getTasks());
     }
 
     @Override

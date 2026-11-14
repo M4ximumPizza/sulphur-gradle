@@ -1,6 +1,5 @@
 package dev.puzzleshq.slime.tasks;
 
-import com.google.gson.JsonElement;
 import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.slime.VersionResolver;
 import dev.puzzleshq.slime.config.SlimeConfig;
@@ -10,14 +9,11 @@ import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSetContainer;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 public abstract class RunServerTask extends JavaExec {
 
     public RunServerTask() {
-        setGroup("jigsaw/runs");
+        setGroup("slime/run");
 
         File runDir = getProject().file("run");
 

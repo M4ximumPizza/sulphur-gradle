@@ -3,6 +3,10 @@ package dev.puzzleshq.slime.util;
 import org.gradle.api.Project;
 
 import java.io.File;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Queue;
 
 public class FileUtil {
 
@@ -11,6 +15,8 @@ public class FileUtil {
     private static File natives;
     private static File libsDir;
     private static File mappingsDir;
+    private static File puzzleManifests;
+    private static File minecraftManifests;
 
     public static File getSlimeCache(Project project) {
         if (slimeCache != null) return slimeCache;
@@ -18,6 +24,22 @@ public class FileUtil {
         if (!slimeCache.exists()) slimeCache.mkdirs();
         FileUtil.slimeCache = slimeCache;
         return slimeCache;
+    }
+
+    public static File getPuzzleManifests(Project project) {
+        if (puzzleManifests != null) return puzzleManifests;
+        File puzzleManifests = new File(getSlimeCache(project), "puzzle-manifests");
+        if (!puzzleManifests.exists()) puzzleManifests.mkdirs();
+        FileUtil.puzzleManifests = puzzleManifests;
+        return puzzleManifests;
+    }
+
+    public static File getMinecraftManifests(Project project) {
+        if (minecraftManifests != null) return minecraftManifests;
+        File minecraftManifests = new File(getSlimeCache(project), "mc-manifests");
+        if (!minecraftManifests.exists()) minecraftManifests.mkdirs();
+        FileUtil.minecraftManifests = minecraftManifests;
+        return minecraftManifests;
     }
 
     public static File getJarsDir(Project project) {
@@ -78,6 +100,34 @@ public class FileUtil {
         if (!file.exists())
             file.mkdirs();
         return file;
+    }
+
+    public static void delete(File f) {
+        if (!f.exists()) return;
+
+        Queue<File> files = new ArrayDeque<>();
+        files.add(f);
+        delete(files);
+    }
+
+    private static void delete(Queue<File> files) {
+        while (!files.isEmpty()) {
+            File f = files.poll();
+            if (!f.exists()) continue;
+            if (f.isFile()) {
+                f.delete();
+                continue;
+            }
+
+            File[] dir = f.listFiles();
+            if (dir == null || dir.length == 0) {
+                f.delete();
+                continue;
+            }
+
+            files.addAll(Arrays.asList(dir));
+            files.add(f);
+        }
     }
 
 }

@@ -17,7 +17,7 @@ import java.util.UUID;
 public abstract class RunClientTask extends JavaExec {
 
     public RunClientTask() {
-        setGroup("jigsaw/runs");
+        setGroup("slime/run");
 
         File runDir = getProject().file("run");
 

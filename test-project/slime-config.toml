@@ -1,11 +1,9 @@
 [minecraft]
-	# Time since last manifest update [ DO NOT MODIFY ]
-	timeSinceManifestUpdate = 1794640101956
 	# Minecraft Version Manifest Source
 	manifestSource = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 	# Minecraft Version
 	minecraftVersion = "b1.7.3"
 	# Minecraft Dev Player Username
 	mcUsername = "dev-player"
-	# Mappings Source for Obfuscated Minecraft [none, official, yarn:build.x, ornithemc:build.x]
+	# Mappings Source for Obfuscated Minecraft [none, official, yarn:build.x, ornithemc:build.x, legacy-yarn:build.x]
 	mappingsSource = "ornithemc:build.1"

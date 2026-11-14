@@ -3,10 +3,7 @@ package com.example.test.mixins;
 import net.minecraft.block.Block;
 import net.minecraft.block.DirtBlock;
 import net.minecraft.block.material.Material;
-import net.minecraft.entity.projectile.EggEntity;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.Random;
 
@@ -19,6 +16,7 @@ public class TestingMixin2 extends Block {
 
     @Override
     public int getDropItem(int i, Random random) {
-        return 95;
+        return Block.FIRE.id;
     }
+
 }
