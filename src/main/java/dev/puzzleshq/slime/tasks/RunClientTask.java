@@ -73,8 +73,6 @@ public abstract class RunClientTask extends JavaExec {
                 s = s.replaceAll("\\$\\{game_assets}", new File(runDir, "assets").getAbsolutePath().replaceAll("\\\\", "/"));
                 newArgs.add(s);
             }
-            newArgs.add("--assetIndex");
-            newArgs.add(versionData.assets);
             args(newArgs);
         }
 

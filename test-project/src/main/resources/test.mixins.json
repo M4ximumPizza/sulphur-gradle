@@ -4,8 +4,7 @@
   "package": "com.example.test.mixins",
   "compatibilityLevel": "JAVA_6",
   "mixins": [
-    "TestingMixin",
-    "TestingMixin2"
+    "TestingMixin"
   ],
   "injectors": {
     "defaultRequire": 1
