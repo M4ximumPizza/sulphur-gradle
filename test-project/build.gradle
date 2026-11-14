@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'slime-core' version '1.0-SNAPSHOT'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of("8")
+    }
+
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+}
+
+dependencies {
+    puzzleLoader 'dev.puzzleshq:puzzle-loader-core:1.4.4-alpha'
+}
+

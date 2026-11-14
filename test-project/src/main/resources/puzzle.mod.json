@@ -1,0 +1,20 @@
+{
+  "formatVersion": 3,
+
+  "display-name": "Test Mod",
+  "id": "test",
+  "version": "1.0.0",
+  "description": "Testing mod for 'slime' gradle",
+  "authors": [ "Mr-Zombii" ],
+  "entrypoints": {
+    "preLaunch": "com.example.test.TestPreLaunch"
+  },
+  "mixins": [
+    "test.mixins.json"
+  ],
+  "depends": {
+  },
+  "access-writers": [
+    "test.manipulator"
+  ]
+}

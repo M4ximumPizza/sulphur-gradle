@@ -1,0 +1,58 @@
+plugins {
+    id 'java'
+    id 'java-gradle-plugin'
+//    id "io.github.sgtsilvio.gradle.maven-central-publishing" version "0.4.0"
+    id 'maven-publish'
+}
+
+group = 'dev.puzzleshq'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    gradlePluginPortal()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of("8")
+    }
+
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    implementation "dev.puzzleshq:gibberish-definer:${gibberish_definer_version}"
+    implementation "net.fabricmc:mapping-io:0.8.0"
+
+    implementation "dev.puzzleshq:lunar-config:1.0.2-alpha"
+
+    implementation "org.ow2.asm:asm:9.8"
+    implementation "org.ow2.asm:asm-tree:9.8"
+    implementation "org.ow2.asm:asm-util:9.8"
+    implementation "org.ow2.asm:asm-analysis:9.8"
+    implementation "org.ow2.asm:asm-commons:9.8"
+
+    implementation "dev.puzzleshq:access-writer:1.0.4+c"
+    implementation "dev.puzzleshq:mod-format-framework:1.0.0"
+    implementation "org.hjson:hjson:3.1.0"
+    implementation 'org.vineflower:vineflower:1.12.0'
+
+    implementation "com.gradleup.shadow:shadow-gradle-plugin:8.3.8"
+    implementation 'com.google.code.gson:gson:2.15.0'
+}
+
+gradlePlugin {
+    plugins {
+        slime_plugin {
+            id = 'slime-core'
+            implementationClass = 'dev.puzzleshq.slime.SlimePlugin'
+        }
+    }
+}
