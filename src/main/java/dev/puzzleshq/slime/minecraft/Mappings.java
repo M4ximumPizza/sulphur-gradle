@@ -2,6 +2,11 @@ package dev.puzzleshq.slime.minecraft;
 
 import dev.puzzleshq.gibberishdefiner.mapping.IMapping;
 import dev.puzzleshq.gibberishdefiner.util.MappingUtil;
+import dev.puzzleshq.lunar.ConfigPair;
+import dev.puzzleshq.slime.VersionResolver;
+import dev.puzzleshq.slime.config.MinecraftConfig;
+import dev.puzzleshq.slime.config.SlimeConfig;
+import dev.puzzleshq.slime.minecraft.manifest.Version;
 import dev.puzzleshq.slime.minecraft.manifest.client.VersionData;
 import dev.puzzleshq.slime.util.FileUtil;
 import dev.puzzleshq.slime.util.JavaUtils;
@@ -52,10 +57,10 @@ public class Mappings {
 
     private static final String yarnMappingUrl = "https://maven.fabricmc.net/net/fabricmc/yarn/";
 
-    public static IMapping getYarnMappings(Project project, VersionData versionData, String yarnBuild) {
+    public static IMapping getYarnMappings(Project project, String version, String yarnBuild) {
         try {
-            String mappingId = versionData.id + "+" + yarnBuild;
-            String tinyFileName = "yarn-" + mappingId + "-v2";
+            String mappingId = version + "+" + yarnBuild;
+            String tinyFileName = "yarn-" + mappingId + "";
 
             URL finalUrl = URI.create(yarnMappingUrl + mappingId + "/" + tinyFileName + ".jar").toURL();
 
@@ -63,12 +68,13 @@ public class Mappings {
             if (tinyFile.exists()) {
                 String mappingsData = new String(Files.readAllBytes(tinyFile.toPath()));
 
-                VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_2_FILE);
+                VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_FILE);
                 return MappingUtil.fromMappingTree(tree, "official", "named");
             }
 
             File mappingsFile = new File(FileUtil.getMappingsDir(project), new File(tinyFileName + ".jar").getName());
             if (!mappingsFile.exists()) {
+                mappingsFile.getParentFile().mkdirs();
                 mappingsFile.createNewFile();
                 try (InputStream stream = finalUrl.openStream()) {
                     byte[] bytes = JavaUtils.readAllBytes(stream);
@@ -93,8 +99,8 @@ public class Mappings {
                 throw new RuntimeException(e);
             }
 
-            VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_2_FILE);
-            return MappingUtil.fromMappingTree(tree, "official", "named").reverse();
+            VisitableMappingTree tree = MappingUtil.fromString(mappingsData, MappingFormat.TINY_FILE);
+            return MappingUtil.fromMappingTree(tree, "official", "named");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -102,9 +108,9 @@ public class Mappings {
 
     private static final String legacyYarnMappingUrl = "https://repo.legacyfabric.net/legacyfabric/net/legacyfabric/legacy-yarn/";
 
-    public static IMapping getLegacyYarnMappings(Project project, VersionData versionData, String yarnBuild) {
+    public static IMapping getLegacyYarnMappings(Project project, String version, String yarnBuild) {
         try {
-            String mappingId = versionData.id + "+" + yarnBuild;
+            String mappingId = version + "+" + yarnBuild;
             String tinyFileName = "legacy-yarn-" + mappingId;
 
             URL finalUrl = URI.create(legacyYarnMappingUrl + mappingId + "/" + tinyFileName + ".jar").toURL();
@@ -152,9 +158,9 @@ public class Mappings {
 
     private static final String orinthemcMappingUrl = "https://maven.ornithemc.net/releases/net/ornithemc/feather-gen2/";
 
-    public static IMapping getOrinthemcMappings(Project project, VersionData versionData, String ornithemcBuild) {
+    public static IMapping getOrinthemcMappings(Project project, String version, String ornithemcBuild) {
         try {
-            String mappingId = versionData.id + "+" + ornithemcBuild;
+            String mappingId = version + "+" + ornithemcBuild;
             String tinyFileName = "feather-gen2-" + mappingId;
 
             URL finalUrl = URI.create(orinthemcMappingUrl + mappingId + "/" + tinyFileName + ".jar").toURL();
@@ -203,4 +209,37 @@ public class Mappings {
         }
     }
 
+    public static IMapping getMappings(Project project, String version) {
+        ConfigPair<SlimeConfig> configPair = SlimeConfig.get(project);
+        SlimeConfig slimeConfig = configPair.getConfig();
+        MinecraftConfig minecraftConfig = slimeConfig.minecraft;
+
+        String[] sourceParts = minecraftConfig.mappingsSource.get().split(":");
+
+        switch (sourceParts[0]) {
+            case "none": return null;
+            case "official": {
+                Version gameVersion = VersionResolver.getManifest(project, SlimeConfig.get(project)).find(version);
+                VersionData versionData = gameVersion.get(project);
+                return getOfficialMappings(project, versionData);
+            }
+            case "yarn": return getYarnMappings(project, version, sourceParts[1]);
+            case "legacy-yarn": return getLegacyYarnMappings(project, version, sourceParts[1]);
+            case "ornithemc": return getOrinthemcMappings(project, version, sourceParts[1]);
+            default: throw new IllegalArgumentException("Unknown mapping type '" + minecraftConfig.mappingsSource.get() + "'");
+        }
+    }
+
+    public static IMapping getMappings(Project project, VersionData versionData, MinecraftConfig config) {
+        String[] sourceParts = config.mappingsSource.get().split(":");
+
+        switch (sourceParts[0]) {
+            case "none": return null;
+            case "official": return getOfficialMappings(project, versionData);
+            case "yarn": return getYarnMappings(project, versionData.id, sourceParts[1]);
+            case "legacy-yarn": return getLegacyYarnMappings(project, versionData.id, sourceParts[1]);
+            case "ornithemc": return getOrinthemcMappings(project, versionData.id, sourceParts[1]);
+            default: throw new IllegalArgumentException("Unknown mapping type '" + config.mappingsSource.get() + "'");
+        }
+    }
 }

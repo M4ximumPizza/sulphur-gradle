@@ -2,7 +2,6 @@ package dev.puzzleshq.slime.minecraft;
 
 import dev.puzzleshq.gibberishdefiner.JarRemapper;
 import dev.puzzleshq.gibberishdefiner.mapping.IMapping;
-import dev.puzzleshq.gibberishdefiner.util.MappingUtil;
 import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.slime.VersionResolver;
 import dev.puzzleshq.slime.config.MinecraftConfig;
@@ -12,24 +11,24 @@ import dev.puzzleshq.slime.minecraft.manifest.VersionManifest;
 import dev.puzzleshq.slime.minecraft.manifest.client.VersionData;
 import dev.puzzleshq.slime.minecraft.manifest.client.libraries.Artifact;
 import dev.puzzleshq.slime.minecraft.manifest.client.libraries.Library;
+import dev.puzzleshq.slime.transform.SlimeConfigurations;
 import dev.puzzleshq.slime.util.FileUtil;
 import dev.puzzleshq.slime.util.JavaUtils;
 import dev.puzzleshq.slime.util.OSUtil;
-import net.fabricmc.mappingio.format.MappingFormat;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
-
-import net.fabricmc.mappingio.tree.VisitableMappingTree;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class MinecraftSetup {
 
-    public static VersionData loadMinecraft(Project project, DependencyHandler handler, ConfigPair<SlimeConfig> pair) {
+    public static void loadMinecraft(Project project, DependencyHandler handler, ConfigPair<SlimeConfig> pair) {
         SlimeConfig config = pair.getConfig();
 
         VersionManifest manifest = VersionResolver.getManifest(project, pair);
@@ -38,27 +37,19 @@ public class MinecraftSetup {
         System.out.println("Found version '" + version.type + " " + version.id + "'");
 
         VersionData client = version.get(project);
-        loadLibrariesForVersion(project, handler, client);
+
+        List<Library> toBeRemapped = loadLibrariesForVersion(project, handler, client);
         if (config.minecraft.mappingsSource.get().equals("none")) {
             downloadJars(project, handler, client, true);
+            for (Library library : toBeRemapped) {
+                handler.add(SlimeConfigurations.nonTransitiveInclude, library.name);
+            }
         } else {
             downloadJars(project, handler, client, false);
             remapJars(project, handler, client, config.minecraft);
-        }
-
-        return client;
-    }
-    
-    private static IMapping getMappings(Project project, VersionData versionData, MinecraftConfig config) {
-        String[] sourceParts = config.mappingsSource.get().split(":");
-
-        switch (sourceParts[0]) {
-            case "none": return null;
-            case "official": return Mappings.getOfficialMappings(project, versionData);
-            case "yarn": return Mappings.getYarnMappings(project, versionData, sourceParts[1]);
-            case "legacy-yarn": return Mappings.getLegacyYarnMappings(project, versionData, sourceParts[1]);
-            case "ornithemc": return Mappings.getOrinthemcMappings(project, versionData, sourceParts[1]);
-            default: throw new IllegalArgumentException("Unknown mapping type '" + config.mappingsSource.get() + "'");
+            for (Library library : toBeRemapped) {
+                handler.add(SlimeConfigurations.remapConfigurationName, library.name);
+            }
         }
     }
 
@@ -69,7 +60,7 @@ public class MinecraftSetup {
 
         boolean doRemap;
         try {
-            doRemap = !remappedInfo.exists() || !new String(Files.readAllBytes(remappedInfo.toPath())).equals(mcCfg.mappingsSource.get());
+            doRemap = !remappedInfo.exists() || !remappedClientFile.exists() || !new String(Files.readAllBytes(remappedInfo.toPath())).equals(mcCfg.mappingsSource.get());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,7 +71,7 @@ public class MinecraftSetup {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            IMapping mapping = getMappings(project, versionData, mcCfg);
+            IMapping mapping = Mappings.getMappings(project, versionData, mcCfg);
 
             JarRemapper.applyBareMapping(clientFile, remappedClientFile, mapping, false);
         }
@@ -115,15 +106,52 @@ public class MinecraftSetup {
             dependencies.add("implementation", "com.mojang:minecraft:" + versionData.id + ":client");
     }
 
-    public static void loadLibrariesForVersion(Project project, DependencyHandler dependencies, VersionData client) {
+    private static void applyManifestVersionConstraints(Project project, Library[] libraries) {
+        // Build a lookup map of group:name -> version straight from the manifest
+        java.util.Map<String, String> requiredVersions = new java.util.HashMap<>();
+
+        for (Library lib : libraries) {
+            // lib.name is typically in standard Maven format: "group:name:version"
+            String[] parts = lib.name.split("[:@]");
+            if (parts.length >= 3) {
+                String group = parts[0];
+                String name = parts[1];
+                String version = parts[2];
+                requiredVersions.put(group + ":" + name, version);
+            }
+        }
+
+        // Apply globally across all configurations so transitive bumps are clamped
+        project.getConfigurations().all(configuration -> {
+            configuration.getResolutionStrategy().eachDependency(details -> {
+                String requestedKey = details.getRequested().getGroup() + ":" + details.getRequested().getName();
+
+                if (requiredVersions.containsKey(requestedKey)) {
+                    String forcedVersion = requiredVersions.get(requestedKey);
+                    details.useVersion(forcedVersion);
+                    details.because("Locked automatically to match Minecraft version requirements.");
+                }
+            });
+        });
+    }
+
+    public static List<Library> loadLibrariesForVersion(Project project, DependencyHandler dependencies, VersionData client) {
         Library[] validLibs = client.getValidLibraries();
         System.out.println("Found '" + validLibs.length + "/" + client.libraries.length + "' valid libraries for this os '" + OSUtil.osId + "'");
 
         File wroteNatives = new File(FileUtil.getVersionNativesFolder(project, client.id), "i-wrote-natives-written.txt");
 
+        applyManifestVersionConstraints(project, validLibs);
+
+        List<Library> toBeRemapped = new ArrayList<>();
         for (Library validLib : validLibs) {
-            if (validLib.downloads.artifact != null)
-                dependencies.add("implementation", validLib.name);
+            if (validLib.downloads.artifact != null) {
+                if (!validLib.name.contains("com.mojang")) {
+                    dependencies.add(SlimeConfigurations.nonTransitiveInclude, validLib.name);
+                } else {
+                    toBeRemapped.add(validLib);
+                }
+            }
             if (!validLib.usesNewFormat() && validLib.getNativeArtifactId() != null) {
                 if (wroteNatives.exists()) continue;
 
@@ -161,6 +189,7 @@ public class MinecraftSetup {
                 throw new RuntimeException(e);
             }
         }
+        return toBeRemapped;
     }
 
     private static void extract(Project project, Library lib, VersionData client, File nativeFile) {

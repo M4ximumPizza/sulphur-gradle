@@ -16,7 +16,9 @@ public class Tasks {
 //        task.register("clearManifestCache", ClearManifestCache.class);
 //        task.register("clearMappingsCache", ClearMappingsCache.class);
 //        task.register("clearJarsCache", ClearJarsCache.class);
-        task.register("regenCache", RegenCache.class);
+//        task.register("regenCache", RegenCache.class);
+        task.register("transformTask", TransformTask.class);
+        task.register("clearTransformCache", ClearTransformCache.class);
     }
 
 }

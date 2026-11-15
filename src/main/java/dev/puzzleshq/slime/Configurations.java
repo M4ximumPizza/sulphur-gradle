@@ -1,16 +1,14 @@
 package dev.puzzleshq.slime;
 
 import dev.puzzleshq.slime.puzzle.*;
+import dev.puzzleshq.slime.transform.SlimeConfigurations;
 import dev.puzzleshq.slime.util.FileUtil;
 import dev.puzzleshq.slime.util.JavaUtils;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.ExternalModuleDependency;
-import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.publish.maven.internal.dependencies.MavenDependency;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,10 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 public class Configurations {
-
-    public static void init(Project project) {
-        project.getConfigurations().maybeCreate("puzzleLoader").setCanBeResolved(false);
-    }
 
     public static void getLoader(Project project, DependencyHandler dependencies, RepositoryHandler repositories, Configuration c) {
         if (c.getName().equals("puzzleLoader")) {
@@ -47,6 +41,9 @@ public class Configurations {
         File fileEpoc = new File(FileUtil.getPuzzleManifests(p), name + "-manifest.epoc");
         File depsFile = new File(FileUtil.getPuzzleManifests(p), name + "-" + version + "-manifest.json");
         File depsFileEpoc = new File(FileUtil.getPuzzleManifests(p), name + "-" + version + "-manifest.epoc");
+        if (!file.exists() || !fileEpoc.exists() || !depsFile.exists() || !depsFileEpoc.exists()) {
+            fileEpoc.getParentFile().mkdirs();
+        }
 
         boolean refreshManifest = !file.exists() || !fileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(fileEpoc.toPath()))) >= VersionResolver.HOUR;
         boolean refreshDepsManifest = !depsFile.exists() || !depsFileEpoc.exists() || System.currentTimeMillis() - Long.valueOf(new String(Files.readAllBytes(depsFileEpoc.toPath()))) >= VersionResolver.HOUR;

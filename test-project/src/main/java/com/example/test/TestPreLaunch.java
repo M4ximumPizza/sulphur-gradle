@@ -7,7 +7,6 @@ public class TestPreLaunch implements PreLaunchInit {
     @Override
     public void onPreLaunch() {
         System.out.println("Hello from test PreLaunch");
-
     }
 
 }
