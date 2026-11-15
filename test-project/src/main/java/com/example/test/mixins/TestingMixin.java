@@ -5,6 +5,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.passive.TropicalFishEntity;
+import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.ItemStack;
@@ -18,6 +20,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
+import java.util.Random;
 import java.util.Set;
 
 @Mixin(ArrowEntity.class)
@@ -65,22 +68,24 @@ public abstract class TestingMixin extends ProjectileEntity {
 //            this.remove();
 //        }
 
-        int chickensPerLayer = 25;
-        float radius = 10;
+        int chickensPerLayer = 50;
+        float radius = 20;
+        int density = 4;
 
         if (!this.world.isClient) {
-            for (int y = 0; y < radius; y++) {
-                float layerMultiplier = (float) Math.sin((float) (Math.PI / radius) * y);
-                float changeValue = (float) (Math.PI * 2) / chickensPerLayer;
-                for(int i = 0; i < chickensPerLayer; ++i) {
+            for (int y = 0; y < (radius * density); y++) {
+                float layerMultiplier = (float) Math.log(((float) (Math.PI / radius) * ((double) y / density)) + .0001);
+                float changeValue = (float) (Math.PI * 2) / (chickensPerLayer * layerMultiplier);
+                for(int i = 0; i < chickensPerLayer * layerMultiplier; ++i) {
                     float cX = (float) ((layerMultiplier * (radius / 2)) * Math.cos(changeValue * i));
                     float cZ = (float) ((layerMultiplier * (radius / 2)) * Math.sin(changeValue * i));
 
-                    ChickenEntity var4 = new ChickenEntity((EntityType<? extends ChickenEntity>) EntityType.get("minecraft:chicken").get(), world);
+                    TropicalFishEntity var4 = new TropicalFishEntity((EntityType<? extends TropicalFishEntity>) EntityType.get("minecraft:tropical_fish").get(), world);
                     var4.setNoGravity(true);
                     var4.setAiDisabled(true);
-                    var4.setBreedingAge(-24000);
-                    var4.setPositionAndAngles(this.x + cX, this.y + y, this.z + cZ, this.yaw, 0.0F);
+                    var4.setBreath(111111111);
+                    var4.setVariant(TropicalFishEntity.COMMON_VARIANTS[world.getRandom().nextInt(TropicalFishEntity.COMMON_VARIANTS.length - 1)]);
+                    var4.setPositionAndAngles(this.x + cX, this.y + ((double) y / density), this.z + cZ, this.yaw, 0.0F);
                     this.world.spawnEntity(var4);
                 }
             }
