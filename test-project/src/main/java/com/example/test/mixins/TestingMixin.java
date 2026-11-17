@@ -2,9 +2,7 @@ package com.example.test.mixins;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.passive.TropicalFishEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
@@ -17,10 +15,8 @@ import net.minecraft.potion.Potions;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
-import java.util.Random;
 import java.util.Set;
 
 @Mixin(ArrowEntity.class)
@@ -68,7 +64,7 @@ public abstract class TestingMixin extends ProjectileEntity {
 //            this.remove();
 //        }
 
-        int chickensPerLayer = 50;
+        int chickensPerLayer = 25;
         float radius = 20;
         int density = 4;
 
@@ -80,12 +76,13 @@ public abstract class TestingMixin extends ProjectileEntity {
                     float cX = (float) ((layerMultiplier * (radius / 2)) * Math.cos(changeValue * i));
                     float cZ = (float) ((layerMultiplier * (radius / 2)) * Math.sin(changeValue * i));
 
-                    TropicalFishEntity var4 = new TropicalFishEntity((EntityType<? extends TropicalFishEntity>) EntityType.get("minecraft:tropical_fish").get(), world);
+                    VillagerEntity var4 = new VillagerEntity((EntityType<? extends VillagerEntity>) EntityType.get("minecraft:villager").get(), world);
                     var4.setNoGravity(true);
                     var4.setAiDisabled(true);
-                    var4.setBreath(111111111);
-                    var4.setVariant(TropicalFishEntity.COMMON_VARIANTS[world.getRandom().nextInt(TropicalFishEntity.COMMON_VARIANTS.length - 1)]);
-                    var4.setPositionAndAngles(this.x + cX, this.y + ((double) y / density), this.z + cZ, this.yaw, 0.0F);
+                    var4.setAir(111111111);
+                    var4.setBreedingAge(-10000000);
+//                    var4.setVariant(TropicalFishEntity.COMMON_VARIANTS[world.getRandom().nextInt(TropicalFishEntity.COMMON_VARIANTS.length - 1)]);
+                    var4.updatePositionAndAngles(this.x + cX, this.y + ((double) y / density), this.z + cZ, this.yaw, 0.0F);
                     this.world.spawnEntity(var4);
                 }
             }
@@ -96,10 +93,10 @@ public abstract class TestingMixin extends ProjectileEntity {
 
     @Override
     public ItemStack asItemStack() {
-        if (this.effects.isEmpty() && this.potion == Potions.field_8984) {
-            return new ItemStack(Items.field_8107);
+        if (this.effects.isEmpty() && this.potion == Potions.EMPTY) {
+            return new ItemStack(Items.ARROW);
         } else {
-            ItemStack var1 = new ItemStack(Items.field_8087);
+            ItemStack var1 = new ItemStack(Items.ARROW);
             PotionUtil.setPotion(var1, this.potion);
             PotionUtil.setCustomPotionEffects(var1, this.effects);
             if (this.colorSet) {

@@ -11,7 +11,9 @@ import dev.puzzleshq.slime.minecraft.manifest.VersionManifest;
 import dev.puzzleshq.slime.minecraft.manifest.client.VersionData;
 import dev.puzzleshq.slime.minecraft.manifest.client.libraries.Artifact;
 import dev.puzzleshq.slime.minecraft.manifest.client.libraries.Library;
+import dev.puzzleshq.slime.transform.LocalMaven;
 import dev.puzzleshq.slime.transform.SlimeConfigurations;
+import dev.puzzleshq.slime.transform.TransformPipeline;
 import dev.puzzleshq.slime.util.FileUtil;
 import dev.puzzleshq.slime.util.JavaUtils;
 import dev.puzzleshq.slime.util.OSUtil;
@@ -47,8 +49,16 @@ public class MinecraftSetup {
         } else {
             downloadJars(project, handler, client, false);
             remapJars(project, handler, client, config.minecraft);
+            TransformPipeline pipeline = TransformPipeline.create(
+                    project, version.id
+            );
+
             for (Library library : toBeRemapped) {
                 handler.add(SlimeConfigurations.remapConfigurationName, library.name);
+                File a = LocalMaven.getArtifactFile(project, LocalMaven.transformName(library.name));
+                if (a.exists()) {
+                    handler.add(SlimeConfigurations.nonTransitiveInclude, project.files(a));
+                }
             }
         }
     }

@@ -55,4 +55,14 @@ public class LocalMaven {
         return artifactDir.toFile();
     }
 
+    public static File getArtifactFile(Project project, String artifactString) {
+        File artifactDir = getArtifactDir(project, artifactString);
+
+        String[] split = artifactString.split(":");
+        String module = split[1];
+        String version = split[2];
+
+        return new File(artifactDir, module + "-" + version + "-remapped.jar");
+    }
+
 }

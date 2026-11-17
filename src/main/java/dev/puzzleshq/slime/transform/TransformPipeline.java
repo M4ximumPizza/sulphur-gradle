@@ -3,6 +3,7 @@ package dev.puzzleshq.slime.transform;
 import dev.puzzleshq.gibberishdefiner.JarRemapper;
 import dev.puzzleshq.gibberishdefiner.mapping.IMapping;
 import dev.puzzleshq.slime.minecraft.Mappings;
+import dev.puzzleshq.slime.minecraft.NamedMappings;
 import dev.puzzleshq.slime.util.FileUtil;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.ArtifactCollection;
@@ -17,6 +18,7 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class TransformPipeline {
@@ -66,9 +68,12 @@ public class TransformPipeline {
                 if (!first.isPresent()) {
                     continue;
                 }
-            }
 
-            remixMapping(artifact.getFile());
+                String artifactLocation = id.getGroup() + ":" + id.getModule() + ":" + id.getVersion();
+
+                System.out.println("Inspecting '" + artifactLocation + "'");
+                remixMapping(artifact.getFile());
+            }
         }
     }
 
@@ -80,13 +85,14 @@ public class TransformPipeline {
             ComponentIdentifier componentIdentifier = artifactId.getComponentIdentifier();
             if (componentIdentifier instanceof ModuleComponentIdentifier) {
                 ModuleComponentIdentifier id = (ModuleComponentIdentifier) componentIdentifier;
-                Optional<Dependency> first = incomingDependencies.stream().filter(d -> d.getGroup().equals(id.getGroup()) && d.getVersion().equals(id.getVersion()) && d.getName().equals(id.getModule())).findFirst();
+                Optional<Dependency> first = incomingDependencies.stream().filter(d -> Objects.equals(d.getGroup(), id.getGroup()) && Objects.equals(d.getVersion(), id.getVersion()) && Objects.equals(d.getName(), id.getModule())).findFirst();
                 if (!first.isPresent()) {
                     remapped.add(artifact.getFile());
                     continue;
                 }
-
                 String artifactLocation = id.getGroup() + ":" + id.getModule() + ":" + id.getVersion();
+
+                System.out.println("Transforming '" + artifactLocation + "'");
                 File file = LocalMaven.getArtifactDir(project, LocalMaven.transformName(artifactLocation));
                 if (!file.exists()) file.mkdirs();
 
@@ -96,6 +102,7 @@ public class TransformPipeline {
                 remapped.add(remappedJar);
             }
         }
+
         dependencies.add(SlimeConfigurations.nonTransitiveInclude, project.files((Object) remapped.toArray(new File[0])));
     }
 }
