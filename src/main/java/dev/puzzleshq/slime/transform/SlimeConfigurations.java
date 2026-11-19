@@ -3,8 +3,6 @@ package dev.puzzleshq.slime.transform;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.*;
 
-import java.util.Objects;
-
 public class SlimeConfigurations {
 
     public static final String puzzleLoaderConfigurationName = "puzzleLoader";

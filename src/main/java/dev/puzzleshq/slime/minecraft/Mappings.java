@@ -43,14 +43,14 @@ public class Mappings {
         for (Map.Entry<String, String> fieldEntry : intermediary.getFieldEntries()) {
             String[] splitA = fieldEntry.getKey().split("~");
             String[] splitB = fieldEntry.getValue().split("~");
-            String[] splitC = combined.mapField(splitB[0], splitB[1]).split("~");
+            String[] splitC = named.mapField(splitB[0], splitB[1]).split("~");
 
             combined.putField(splitA[0], splitA[1], splitC[0], splitC[1]);
         }
         for (Map.Entry<String, String> methodEntry : intermediary.getMethodEntries()) {
             String[] splitA = methodEntry.getKey().split("~");
             String[] splitB = methodEntry.getValue().split("~");
-            String[] splitC = combined.mapMethod(splitB[0], splitB[1], splitB[2]).split("~");
+            String[] splitC = named.mapMethod(splitB[0], splitB[1], splitB[2]).split("~");
 
             combined.putMethod(
                     splitA[0], splitA[1], splitA[2],

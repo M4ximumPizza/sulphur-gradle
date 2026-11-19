@@ -3,7 +3,6 @@ package dev.puzzleshq.slime.transform;
 import dev.puzzleshq.gibberishdefiner.JarRemapper;
 import dev.puzzleshq.gibberishdefiner.mapping.IMapping;
 import dev.puzzleshq.slime.minecraft.Mappings;
-import dev.puzzleshq.slime.minecraft.NamedMappings;
 import dev.puzzleshq.slime.util.FileUtil;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.ArtifactCollection;
@@ -53,7 +52,11 @@ public class TransformPipeline {
         return new TransformPipeline(project, remixed, clientFile);
     }
 
-    public void remixMapping(File file) {
+    public void reverse() {
+        mapping = mapping.reverse();
+    }
+
+    public void remix(File file) {
         mapping = JarRemapper.createFinishedMapping(file, mapping);
     }
 
@@ -72,9 +75,13 @@ public class TransformPipeline {
                 String artifactLocation = id.getGroup() + ":" + id.getModule() + ":" + id.getVersion();
 
                 System.out.println("Inspecting '" + artifactLocation + "'");
-                remixMapping(artifact.getFile());
+                remix(artifact.getFile());
             }
         }
+    }
+
+    public void remap(File in, File out) {
+        JarRemapper.applyMapping(in, out, mapping);
     }
 
     public void remap(DependencySet incomingDependencies, ArtifactCollection incoming, DependencyHandler dependencies) {
