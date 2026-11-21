@@ -18,7 +18,10 @@ import dev.puzzleshq.slime.util.FileUtil;
 import dev.puzzleshq.slime.util.JavaUtils;
 import dev.puzzleshq.slime.util.OSUtil;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.ArtifactCollection;
+import org.gradle.api.artifacts.ResolvableDependencies;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -46,20 +49,39 @@ public class MinecraftSetup {
             for (Library library : toBeRemapped) {
                 handler.add(SlimeConfigurations.nonTransitiveInclude, library.name);
             }
+
+            project.afterEvaluate((p) -> {
+                ResolvableDependencies incoming = SlimeConfigurations.apiRemapConfiguration.getIncoming();
+                for (ResolvedArtifactResult artifact : incoming.getArtifacts()) {
+                    File inFile = artifact.getFile();
+                    handler.add(SlimeConfigurations.nonTransitiveInclude, inFile);
+                }
+            });
         } else {
             downloadJars(project, handler, client, false);
             remapJars(project, handler, client, config.minecraft);
-            TransformPipeline pipeline = TransformPipeline.create(
-                    project, version.id
-            );
 
             for (Library library : toBeRemapped) {
-                handler.add(SlimeConfigurations.remapConfigurationName, library.name);
+                handler.add(SlimeConfigurations.internalRemapConfigurationName, library.name);
                 File a = LocalMaven.getArtifactFile(project, LocalMaven.transformName(library.name));
                 if (a.exists()) {
                     handler.add(SlimeConfigurations.nonTransitiveInclude, project.files(a));
                 }
             }
+
+            project.afterEvaluate((p) -> {
+                ResolvableDependencies incoming = SlimeConfigurations.apiRemapConfiguration.getIncoming();
+                for (ResolvedArtifactResult artifact : incoming.getArtifacts()) {
+                    File inFile = artifact.getFile();
+                    File file = LocalMaven.getArtifactDir(project, LocalMaven.transformName("files:" + inFile.getName().substring(0, inFile.getName().lastIndexOf('.')) + ":0.0.0"));
+                    if (!file.exists()) file.mkdirs();
+                    File remappedJar = new File(file, inFile.getName().replaceAll("\\.jar", "-remapped.jar"));
+                    if (remappedJar.exists()) {
+                        handler.add(SlimeConfigurations.nonTransitiveInclude, project.files(remappedJar));
+                    }
+                }
+            });
+
         }
     }
 

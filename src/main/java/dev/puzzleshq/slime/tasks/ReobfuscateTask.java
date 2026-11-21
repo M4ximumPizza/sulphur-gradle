@@ -36,7 +36,7 @@ public abstract class ReobfuscateTask extends DefaultTask {
     @TaskAction
     public void exec() {
         Project project = getProject();
-        ResolvableDependencies incoming = SlimeConfigurations.remapConfiguration.getIncoming();
+        ResolvableDependencies incoming = SlimeConfigurations.internalRemapConfiguration.getIncoming();
 
         TransformPipeline transformPipeline = TransformPipeline.create(
                 project,

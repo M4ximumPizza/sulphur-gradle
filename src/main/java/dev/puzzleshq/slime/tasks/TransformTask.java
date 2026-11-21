@@ -23,7 +23,7 @@ public class TransformTask extends DefaultTask {
     public void exec() {
         Project project = getProject();
         DependencyHandler dependencies = project.getDependencies();
-        ResolvableDependencies incoming = SlimeConfigurations.remapConfiguration.getIncoming();
+        ResolvableDependencies incoming = SlimeConfigurations.internalRemapConfiguration.getIncoming();
 
         TransformPipeline transformPipeline = TransformPipeline.create(
                 project,

@@ -8,11 +8,13 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.ArtifactCollection;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.DependencySet;
+import org.gradle.api.artifacts.FileCollectionDependency;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
+import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifier;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -76,6 +78,10 @@ public class TransformPipeline {
 
                 System.out.println("Inspecting '" + artifactLocation + "'");
                 remix(artifact.getFile());
+            } else {
+                File inFile = artifact.getFile();
+                System.out.println("Inspecting '" + inFile.getName() + "'");
+                remix(inFile);
             }
         }
     }
@@ -105,6 +111,14 @@ public class TransformPipeline {
 
                 File remappedJar = new File(file, artifact.getFile().getName().replaceAll("\\.jar", "-remapped.jar"));
 
+                JarRemapper.applyMapping(artifact.getFile(), remappedJar, mapping);
+                remapped.add(remappedJar);
+            } else {
+                File inFile = artifact.getFile();
+                System.out.println("Transforming '" + inFile.getName() + "'");
+                File file = LocalMaven.getArtifactDir(project, LocalMaven.transformName("files:" + inFile.getName().substring(0, inFile.getName().lastIndexOf('.')) + ":0.0.0"));
+                if (!file.exists()) file.mkdirs();
+                File remappedJar = new File(file, inFile.getName().replaceAll("\\.jar", "-remapped.jar"));
                 JarRemapper.applyMapping(artifact.getFile(), remappedJar, mapping);
                 remapped.add(remappedJar);
             }
