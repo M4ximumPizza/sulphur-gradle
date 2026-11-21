@@ -4,6 +4,7 @@ import dev.puzzleshq.craft.sync.registry.IRemappableIdMapper;
 import it.unimi.dsi.fastutil.objects.*;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
@@ -48,6 +49,7 @@ public class PacketRemapBlockStates implements IPacketPayload {
     }
 
     public static void apply(PacketRemapBlockStates payload, ClientCommonPacketListener clientLoginPacketListener) {
+        if (MinecraftClient.getInstance().isIntegratedServerRunning()) return;
         ((IRemappableIdMapper<BlockState>) Block.STATE_IDS).remap(payload.remap);
     }
 

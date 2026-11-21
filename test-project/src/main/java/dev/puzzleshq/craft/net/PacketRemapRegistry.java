@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.listener.ClientCommonPacketListener;
@@ -78,6 +79,8 @@ public class PacketRemapRegistry implements IPacketPayload {
     }
 
     public static void apply(PacketRemapRegistry payload, ClientCommonPacketListener clientLoginPacketListener) {
+        if (MinecraftClient.getInstance().isIntegratedServerRunning()) return;
+
         for (Object2ObjectMap.Entry<String, Object2IntMap<Identifier>> stringObject2IntMapEntry : payload.mapMap.object2ObjectEntrySet()) {
             Identifier regId = Identifier.tryParse(stringObject2IntMapEntry.getKey());
             ((IRemappableRegistry)Registries.REGISTRIES.get(regId))
