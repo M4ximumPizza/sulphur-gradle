@@ -13,24 +13,25 @@ import dev.puzzleshq.slime.minecraft.manifest.client.libraries.Artifact;
 import dev.puzzleshq.slime.minecraft.manifest.client.libraries.Library;
 import dev.puzzleshq.slime.transform.LocalMaven;
 import dev.puzzleshq.slime.transform.SlimeConfigurations;
-import dev.puzzleshq.slime.transform.TransformPipeline;
 import dev.puzzleshq.slime.util.FileUtil;
 import dev.puzzleshq.slime.util.JavaUtils;
 import dev.puzzleshq.slime.util.OSUtil;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.ArtifactCollection;
 import org.gradle.api.artifacts.ResolvableDependencies;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+@SuppressWarnings("ResultOfMethodCallIgnored")
 public class MinecraftSetup {
 
     public static void loadMinecraft(Project project, DependencyHandler handler, ConfigPair<SlimeConfig> pair) {
@@ -114,7 +115,6 @@ public class MinecraftSetup {
 
     public static void downloadJars(Project project, DependencyHandler dependencies, VersionData versionData, boolean addDep) {
         File clientFile = new File(FileUtil.getVersionFolder(project, versionData.id), "minecraft-" + versionData.id + "-client.jar");
-//        File serverFile = new File(FileUtil.getVersionFolder(project, versionData.id), "minecraft-" + versionData.id + "-server.jar");
 
         if (versionData.downloads.client != null && !clientFile.exists()) {
             try (InputStream stream = versionData.downloads.client.url.openStream()) {
@@ -126,23 +126,28 @@ public class MinecraftSetup {
                 throw new RuntimeException(e);
             }
         }
-//        if (versionData.downloads.server != null && !serverFile.exists()) {
-//            try (InputStream stream = versionData.downloads.server.url.openStream()) {
-//                byte[] bytes = JavaUtils.readAllBytes(stream);
-//                FileOutputStream outputStream = new FileOutputStream(serverFile);
-//                outputStream.write(bytes);
-//                outputStream.close();
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-//        }
         if (clientFile.exists() && addDep)
             dependencies.add("implementation", "com.mojang:minecraft:" + versionData.id + ":client");
     }
 
     private static void applyManifestVersionConstraints(Project project, Library[] libraries) {
         // Build a lookup map of group:name -> version straight from the manifest
-        java.util.Map<String, String> requiredVersions = new java.util.HashMap<>();
+        Map<String, String> requiredVersions = getRequiredVersionsMap(libraries);
+
+        // Apply globally across all configurations so transitive bumps are clamped
+        project.getConfigurations().all(configuration -> configuration.getResolutionStrategy().eachDependency(details -> {
+            String requestedKey = details.getRequested().getGroup() + ":" + details.getRequested().getName();
+
+            if (requiredVersions.containsKey(requestedKey)) {
+                String forcedVersion = requiredVersions.get(requestedKey);
+                details.useVersion(forcedVersion);
+                details.because("Locked automatically to match Minecraft version requirements.");
+            }
+        }));
+    }
+
+    private static @NotNull Map<String, String> getRequiredVersionsMap(Library[] libraries) {
+        Map<String, String> requiredVersions = new java.util.HashMap<>();
 
         for (Library lib : libraries) {
             // lib.name is typically in standard Maven format: "group:name:version"
@@ -154,19 +159,7 @@ public class MinecraftSetup {
                 requiredVersions.put(group + ":" + name, version);
             }
         }
-
-        // Apply globally across all configurations so transitive bumps are clamped
-        project.getConfigurations().all(configuration -> {
-            configuration.getResolutionStrategy().eachDependency(details -> {
-                String requestedKey = details.getRequested().getGroup() + ":" + details.getRequested().getName();
-
-                if (requiredVersions.containsKey(requestedKey)) {
-                    String forcedVersion = requiredVersions.get(requestedKey);
-                    details.useVersion(forcedVersion);
-                    details.because("Locked automatically to match Minecraft version requirements.");
-                }
-            });
-        });
+        return requiredVersions;
     }
 
     public static List<Library> loadLibrariesForVersion(Project project, DependencyHandler dependencies, VersionData client) {
@@ -228,7 +221,7 @@ public class MinecraftSetup {
 
     private static void extract(Project project, Library lib, VersionData client, File nativeFile) {
         try {
-            ZipInputStream zipStream = new ZipInputStream(new FileInputStream(nativeFile));
+            ZipInputStream zipStream = new ZipInputStream(Files.newInputStream(nativeFile.toPath()));
             ZipEntry zipEntry;
             while ((zipEntry = zipStream.getNextEntry()) != null) {
                 if (zipEntry.isDirectory()) continue;
