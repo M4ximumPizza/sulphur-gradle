@@ -1,6 +1,6 @@
 pluginManagement {
+    includeBuild(rootProject.projectDir.parentFile)
     repositories {
-        mavenLocal()
         gradlePluginPortal()
         maven {
             name = 'Fabric'

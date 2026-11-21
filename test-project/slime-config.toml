@@ -11,5 +11,5 @@
 [puzzle]
 	# Interface Injectors
 	injectors = ["src/main/resources/craft.inject"]
-	# Access Manipulators/Wideners
+	# Access Transformer/Manipulators/Wideners
 	wideners = ["src/main/resources/craft.manipulator"]
