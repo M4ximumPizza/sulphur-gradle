@@ -1,0 +1,1 @@
+public method net/minecraft/network/ConnectionProtocol addPacket (Lnet/minecraft/network/protocol/PacketFlow;Ljava/lang/Class;)Lnet/minecraft/network/ConnectionProtocol;

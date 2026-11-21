@@ -8,11 +8,11 @@ version = '1.0-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of("8")
+        languageVersion = JavaLanguageVersion.of("21")
     }
 
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -22,10 +22,19 @@ repositories {
         name = 'Fabric'
         url = 'https://maven.fabricmc.net/'
     }
+    maven {
+        name = 'Neoforged'
+        url = 'https://maven.neoforged.net/releases/'
+    }
+    maven {
+        name = "Forge"
+        url = "https://maven.minecraftforge.net"
+    }
 }
 
 dependencies {
-//    puzzleLoader 'dev.puzzleshq:puzzle-loader-core:1.4.5-alpha'
-    puzzleLoader 'dev.puzzleshq:puzzle-loader-core:69.69.69-alpha'
+    puzzleLoader 'dev.puzzleshq:puzzle-loader-core:1.4.5-alpha'
+//    puzzleLoader 'dev.puzzleshq:puzzle-loader-core:69.69.69-alpha'
+    implementation "net.minecraftforge:eventbus:2.2.1"
 }
 

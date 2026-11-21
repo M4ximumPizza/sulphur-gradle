@@ -24,7 +24,7 @@ repositories {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of("8")
+        languageVersion = JavaLanguageVersion.of("21")
     }
 
     sourceCompatibility = JavaVersion.VERSION_1_8

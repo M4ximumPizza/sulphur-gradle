@@ -2,14 +2,8 @@
 	# Minecraft Version Manifest Source
 	manifestSource = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 	# Minecraft Version
-	minecraftVersion = "1.14.4"
+	minecraftVersion = "1.21.4"
 	# Minecraft Dev Player Username
 	mcUsername = "dev-player"
 	# Mappings Source for Obfuscated Minecraft [none, official, yarn:build.x, ornithemc:build.x, legacy-yarn:build.x]
-	mappingsSource = "yarn:build.18"
-
-[puzzle]
-	# Interface Injectors
-	injectors = ["src/main/resources/test.inject"]
-	# Access Manipulators/Wideners
-	wideners = ["src/main/resources/test.manipulator"]
+	mappingsSource = "yarn:build.8"

@@ -7,14 +7,14 @@
   "description": "Testing mod for 'slime' gradle",
   "authors": [ "Mr-Zombii" ],
   "entrypoints": {
-    "preLaunch": "com.example.test.TestPreLaunch"
+    "init": "dev.puzzleshq.craft.PLMinecraft"
   },
   "mixins": [
-    "test.mixins.json"
+    "craft.mixins.json"
   ],
   "depends": {
   },
   "access-writers": [
-    "test.manipulator"
+    "craft.manipulator"
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.puzzleshq.craft.mixin",
+  "compatibilityLevel": "JAVA_6",
+  "mixins": [
+    "MixinModInit",
+    "MixinRegistryBootstrap",
+    "block.MixinBlock",
+    "block.MixinBlockState",
+    "net.MixinCustomPayloadC2SPacket",
+    "net.MixinCustomPayloadS2CPacket",
+    "sync.MixinIdMapper",
+    "sync.MixinMappedRegistry",
+    "sync.MixinServer"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

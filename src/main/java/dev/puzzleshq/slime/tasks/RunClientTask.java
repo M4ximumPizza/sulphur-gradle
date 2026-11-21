@@ -50,8 +50,7 @@ public abstract class RunClientTask extends JavaExec {
                 "-XX:G1HeapRegionSize=32M",
                 "-Dminecraft.api.auth.host=https://nope.invalid",
                 "-Dminecraft.api.account.host=https://nope.invalid",
-                "-Dminecraft.api.session.host=https://nope.invalid",
-                "-Dminecraft.api.services.host=https://nope.invalid"
+                "-Dminecraft.api.session.host=https://nope.invalid"
         );
 
         jvmArgs(
