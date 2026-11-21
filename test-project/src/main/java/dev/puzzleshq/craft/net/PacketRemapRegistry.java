@@ -1,22 +1,16 @@
 package dev.puzzleshq.craft.net;
 
 import dev.puzzleshq.craft.sync.registry.IRemappableRegistry;
-import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.listener.ClientCommonPacketListener;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
 
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class PacketRemapRegistry implements IPacketPayload {
 
@@ -36,17 +30,16 @@ public class PacketRemapRegistry implements IPacketPayload {
     private final Object2ObjectMap<String, Object2IntMap<Identifier>> mapMap = new Object2ObjectOpenHashMap<>();
 
     public <T> void writeRegistry(PacketByteBuf friendlyByteBuf, Identifier regId) {
-        Registry<T> registry = (Registry<T>) Registries.REGISTRIES.get(regId);
+        IRemappableRegistry registry = IRemappableRegistry.get(Registries.REGISTRIES.get(regId));
         friendlyByteBuf.writeString(regId.toString());
 
-        List<T> collect = registry.stream().collect(Collectors.toList());
-        friendlyByteBuf.writeInt(collect.size());
-        for (T block : collect) {
-            Identifier k = registry.getKey(block).get().getValue();
-            int id = registry.getRawId(block);
+        Object2IntMap<Identifier> map = registry.getMap();
+        friendlyByteBuf.writeInt(map.size());
 
-            friendlyByteBuf.writeInt(id);
-            friendlyByteBuf.writeString(k.toString());
+        ObjectSet<Object2IntMap.Entry<Identifier>> entries = map.object2IntEntrySet();
+        for (Object2IntMap.Entry<Identifier> entry : entries) {
+            friendlyByteBuf.writeInt(entry.getIntValue());
+            friendlyByteBuf.writeString(entry.getKey().toString());
         }
     }
 
@@ -83,8 +76,8 @@ public class PacketRemapRegistry implements IPacketPayload {
 
         for (Object2ObjectMap.Entry<String, Object2IntMap<Identifier>> stringObject2IntMapEntry : payload.mapMap.object2ObjectEntrySet()) {
             Identifier regId = Identifier.tryParse(stringObject2IntMapEntry.getKey());
-            ((IRemappableRegistry)Registries.REGISTRIES.get(regId))
-                    .remap(stringObject2IntMapEntry.getValue());
+            IRemappableRegistry registry = IRemappableRegistry.get(Registries.REGISTRIES.get(regId));
+            registry.remap(stringObject2IntMapEntry.getValue());
         }
     }
 

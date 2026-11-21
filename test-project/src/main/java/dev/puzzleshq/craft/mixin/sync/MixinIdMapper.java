@@ -24,6 +24,7 @@ public class MixinIdMapper<T> implements IRemappableIdMapper<T> {
     @Final
     private List<T> list;
 
+    @SuppressWarnings("unchecked")
     @Override
     public void remap(Object2IntMap<T> newEntries) {
         idMap.clear();

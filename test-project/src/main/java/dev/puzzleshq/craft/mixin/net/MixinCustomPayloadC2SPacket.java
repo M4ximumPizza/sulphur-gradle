@@ -34,11 +34,11 @@ public abstract class MixinCustomPayloadC2SPacket {
     }
 
     @Inject(method = "apply(Lnet/minecraft/network/listener/ServerCommonPacketListener;)V", cancellable = true, at = @At("HEAD"))
-    private void handle(ServerCommonPacketListener listener, CallbackInfo ci) {
+    private void handle(ServerCommonPacketListener $$0, CallbackInfo ci) {
         if (payload instanceof IPacketPayload packetPayload) {
             BiConsumer<IPacketPayload, ServerCommonPacketListener> serverHandler = ModdedPackets.getServerHandler(packetPayload.getType());
             if (serverHandler == null) return;
-            serverHandler.accept(packetPayload, listener);
+            serverHandler.accept(packetPayload, $$0);
             ci.cancel();
         }
     }

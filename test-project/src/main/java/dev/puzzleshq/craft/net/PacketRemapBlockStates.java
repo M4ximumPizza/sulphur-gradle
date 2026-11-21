@@ -38,7 +38,7 @@ public class PacketRemapBlockStates implements IPacketPayload {
     }
 
     public void write(PacketByteBuf buf) {
-        Object2IntMap<BlockState> map = ((IRemappableIdMapper<BlockState>) Block.STATE_IDS).getMap();
+        Object2IntMap<BlockState> map = IRemappableIdMapper.get(Block.STATE_IDS).getMap();
         ObjectSet<Object2IntMap.Entry<BlockState>> entries = map.object2IntEntrySet();
         buf.writeInt(entries.size());
         for (Object2IntMap.Entry<BlockState> blockStateEntry : entries) {
@@ -50,7 +50,7 @@ public class PacketRemapBlockStates implements IPacketPayload {
 
     public static void apply(PacketRemapBlockStates payload, ClientCommonPacketListener clientLoginPacketListener) {
         if (MinecraftClient.getInstance().isIntegratedServerRunning()) return;
-        ((IRemappableIdMapper<BlockState>) Block.STATE_IDS).remap(payload.remap);
+        IRemappableIdMapper.get(Block.STATE_IDS).remap(payload.remap);
     }
 
     @Override
