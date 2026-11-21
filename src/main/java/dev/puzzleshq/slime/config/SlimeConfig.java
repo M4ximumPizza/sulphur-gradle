@@ -27,4 +27,7 @@ public class SlimeConfig {
     @Comment(" Minecraft Configuration Details")
     public MinecraftConfig minecraft;
 
+    @Comment(" Puzzle Configuration Details")
+    public PuzzleConfig puzzle;
+
 }

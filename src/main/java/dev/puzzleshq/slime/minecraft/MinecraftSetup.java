@@ -85,10 +85,12 @@ public class MinecraftSetup {
         }
     }
 
-    private static void remapJars(Project project, DependencyHandler dependencies, VersionData versionData, MinecraftConfig mcCfg) {
+    public static void remapJars(Project project, DependencyHandler dependencies, VersionData versionData, MinecraftConfig mcCfg) {
         File clientFile = new File(FileUtil.getVersionFolder(project, versionData.id), "minecraft-" + versionData.id + "-client.jar");
-        File remappedInfo = new File(FileUtil.getRemappedFolder(project, "minecraft", versionData.id), "minecraft-" + versionData.id + "-client.info");
-        File remappedClientFile = new File(FileUtil.getRemappedFolder(project, "minecraft", versionData.id), "minecraft-" + versionData.id + "-client.jar");
+        File dir = LocalMaven.getArtifactDir(project, "puzzle.remap.com.mojang:minecraft:" + versionData.id);
+        if (!dir.exists()) dir.mkdirs();
+        File remappedInfo = new File(dir, "minecraft-" + versionData.id + "-client.info");
+        File remappedClientFile = new File(dir, "minecraft-" + versionData.id + "-client.jar");
 
         boolean doRemap;
         try {

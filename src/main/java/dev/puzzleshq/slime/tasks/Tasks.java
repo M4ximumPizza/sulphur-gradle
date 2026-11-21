@@ -1,9 +1,5 @@
 package dev.puzzleshq.slime.tasks;
 
-import dev.puzzleshq.slime.tasks.cache.ClearJarsCache;
-import dev.puzzleshq.slime.tasks.cache.ClearManifestCache;
-import dev.puzzleshq.slime.tasks.cache.ClearMappingsCache;
-import dev.puzzleshq.slime.tasks.cache.ClearNativesCache;
 import org.gradle.api.tasks.TaskContainer;
 
 public class Tasks {
@@ -19,7 +15,8 @@ public class Tasks {
 //        task.register("regenCache", RegenCache.class);
         task.register("reobfuscate", ReobfuscateTask.class);
 
-        task.register("transformTask", TransformTask.class);
+        task.register("retransformGame", RetransformTask.class);
+        task.register("transformDependencies", TransformTask.class);
         task.register("clearTransformCache", ClearTransformCache.class);
     }
 
