@@ -72,6 +72,7 @@ public abstract class RunClientTask extends JavaExec {
                 s = s.replaceAll("\\$\\{game_directory}", gameDir);
                 s = s.replaceAll("\\$\\{game_assets}", assetsDir);
                 s = s.replaceAll("\\$\\{version_type}", "sulphur-dev");
+                s = s.replaceAll("\\$\\{version_name}", versionData.id);
                 newArgs.add(s);
             }
             args(newArgs);
