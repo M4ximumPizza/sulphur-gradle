@@ -1,5 +1,6 @@
-# Sulphur Gradle - Dev environment for Puzzle on Minecraft
-
+## Sulphur Gradle <br>
+###### Dev environment for Puzzle on Minecraft <br>
+___
 - To use `test-project` you may want to link its `build.gradle` in intellij
 
 ### Todo
