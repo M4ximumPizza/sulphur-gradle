@@ -4,20 +4,18 @@ import com.google.gson.JsonElement;
 import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.sulphur.util.FileUtil;
 import dev.puzzleshq.sulphur.VersionResolver;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSetContainer;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class RunClientTask extends JavaExec {
 
     public RunClientTask() {
-        setGroup("slime/run");
+        setGroup(TaskGroups.run);
 
         File runDir = getProject().file("run");
 
@@ -58,9 +56,12 @@ public abstract class RunClientTask extends JavaExec {
         );
 
         args(
-                "--do-title-transformer", "false"
+//                "--do-title-transformer", "false"
 //                "--mod-folder", new File(getProject().file("runs"), "pmods").getAbsolutePath()
         );
+
+        String assetsDir = FileUtil.getAssetsDir(getProject()).getAbsolutePath().replaceAll("\\\\", "/");
+        String gameDir = runDir.getAbsolutePath().replaceAll("\\\\", "/");
 
         if (versionData.minecraftArguments != null) {
             String[] gameArgs = versionData.minecraftArguments.split(" ");
@@ -68,8 +69,8 @@ public abstract class RunClientTask extends JavaExec {
             for (String s : gameArgs) {
                 s = s.replaceAll("\\$\\{auth_player_name}", config.minecraft.mcUsername.get());
                 s = s.replaceAll("\\$\\{auth_session}", "");
-                s = s.replaceAll("\\$\\{game_directory}", runDir.getAbsolutePath().replaceAll("\\\\", "/"));
-                s = s.replaceAll("\\$\\{game_assets}", new File(runDir, "assets").getAbsolutePath().replaceAll("\\\\", "/"));
+                s = s.replaceAll("\\$\\{game_directory}", gameDir);
+                s = s.replaceAll("\\$\\{game_assets}", assetsDir);
                 newArgs.add(s);
             }
             args(newArgs);
@@ -83,8 +84,8 @@ public abstract class RunClientTask extends JavaExec {
                 String s = elem.getAsString();
                 s = s.replaceAll("\\$\\{auth_player_name}", config.minecraft.mcUsername.get());
                 s = s.replaceAll("\\$\\{auth_session}", "");
-                s = s.replaceAll("\\$\\{game_directory}", runDir.getAbsolutePath().replaceAll("\\\\", "/"));
-                s = s.replaceAll("\\$\\{game_assets}", new File(runDir, "assets").getAbsolutePath().replaceAll("\\\\", "/"));
+                s = s.replaceAll("\\$\\{game_directory}", gameDir);
+                s = s.replaceAll("\\$\\{assets_root}", assetsDir);
                 s = s.replaceAll("\\$\\{auth_access_token}", "");
                 s = s.replaceAll("\\$\\{auth_xuid}", "0");
                 s = s.replaceAll("\\$\\{assets_index_name}", versionData.assets);

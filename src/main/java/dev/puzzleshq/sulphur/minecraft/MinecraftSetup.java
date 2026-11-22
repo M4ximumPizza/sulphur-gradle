@@ -6,11 +6,13 @@ import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.sulphur.VersionResolver;
 import dev.puzzleshq.sulphur.config.MinecraftConfig;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
-import dev.puzzleshq.sulphur.minecraft.manifest.Version;
-import dev.puzzleshq.sulphur.minecraft.manifest.VersionManifest;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Artifact;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Library;
+import dev.puzzleshq.sulphur.minecraft.manifest.assets.Asset;
+import dev.puzzleshq.sulphur.minecraft.manifest.assets.AssetsManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.Version;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.VersionManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries.Artifact;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries.Library;
 import dev.puzzleshq.sulphur.transform.LocalMaven;
 import dev.puzzleshq.sulphur.transform.SulphurConfigurations;
 import dev.puzzleshq.sulphur.util.ELFUtil;
@@ -22,18 +24,34 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class MinecraftSetup {
 
-    public static void loadMinecraft(Project project, DependencyHandler handler, ConfigPair<SulpherConfig> pair) {
+    public static final String assetsUrl =
+            "https://resources.download.minecraft.net/";
+
+    private static final ExecutorService assetDownloadService =
+            Executors.newFixedThreadPool(4);
+
+    public static void loadMinecraft(
+            Project project,
+            DependencyHandler handler,
+            ConfigPair<SulpherConfig> pair
+    ) {
         SulpherConfig config = pair.getConfig();
         MinecraftConfig minecraft = config.minecraft;
 
@@ -69,14 +87,20 @@ public class MinecraftSetup {
             );
 
             if (remapped.isFile()) {
-                handler.add(SulphurConfigurations.nonTransitiveInclude, project.files(remapped));
+                handler.add(
+                        SulphurConfigurations.nonTransitiveInclude,
+                        project.files(remapped)
+                );
             }
         }
 
         registerRemappedDependencies(project, handler);
     }
 
-    private static void registerUnmappedDependencies(Project project, DependencyHandler handler) {
+    private static void registerUnmappedDependencies(
+            Project project,
+            DependencyHandler handler
+    ) {
         project.afterEvaluate(p -> {
             for (ResolvedArtifactResult artifact :
                     SulphurConfigurations.apiRemapConfiguration
@@ -91,7 +115,10 @@ public class MinecraftSetup {
         });
     }
 
-    private static void registerRemappedDependencies(Project project, DependencyHandler handler) {
+    private static void registerRemappedDependencies(
+            Project project,
+            DependencyHandler handler
+    ) {
         project.afterEvaluate(p -> {
             for (ResolvedArtifactResult artifact :
                     SulphurConfigurations.apiRemapConfiguration
@@ -108,10 +135,15 @@ public class MinecraftSetup {
 
                 File directory = LocalMaven.getArtifactDir(
                         project,
-                        LocalMaven.transformName("files:" + artifactName + ":0.0.0")
+                        LocalMaven.transformName(
+                                "files:" + artifactName + ":0.0.0"
+                        )
                 );
 
-                File remapped = new File(directory, artifactName + "-remapped.jar");
+                File remapped = new File(
+                        directory,
+                        artifactName + "-remapped.jar"
+                );
 
                 if (remapped.isFile()) {
                     handler.add(
@@ -123,30 +155,75 @@ public class MinecraftSetup {
         });
     }
 
-    public static void remapJars(Project project, DependencyHandler dependencies, VersionData versionData, MinecraftConfig mcCfg) {
-        File clientFile = new File(FileUtil.getVersionFolder(project, versionData.id), "minecraft-" + versionData.id + "-client.jar");
-        File dir = LocalMaven.getArtifactDir(project, "puzzle.remap.com.mojang:minecraft:" + versionData.id);
-        if (!dir.exists()) dir.mkdirs();
-        File remappedInfo = new File(dir, "minecraft-" + versionData.id + "-client.info");
-        File remappedClientFile = new File(dir, "minecraft-" + versionData.id + "-client.jar");
+    public static void remapJars(
+            Project project,
+            DependencyHandler dependencies,
+            VersionData versionData,
+            MinecraftConfig mcCfg
+    ) {
+        File clientFile = new File(
+                FileUtil.getVersionFolder(project, versionData.id),
+                "minecraft-" + versionData.id + "-client.jar"
+        );
+
+        File dir = LocalMaven.getArtifactDir(
+                project,
+                "puzzle.remap.com.mojang:minecraft:" + versionData.id
+        );
+
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        File remappedInfo = new File(
+                dir,
+                "minecraft-" + versionData.id + "-client.info"
+        );
+
+        File remappedClientFile = new File(
+                dir,
+                "minecraft-" + versionData.id + "-client.jar"
+        );
 
         boolean doRemap;
+
         try {
-            doRemap = !remappedInfo.exists() || !remappedClientFile.exists() || !new String(Files.readAllBytes(remappedInfo.toPath())).equals(mcCfg.mappingsSource.get());
+            doRemap = !remappedInfo.exists()
+                    || !remappedClientFile.exists()
+                    || !new String(
+                    Files.readAllBytes(remappedInfo.toPath()),
+                    StandardCharsets.UTF_8
+            ).equals(mcCfg.mappingsSource.get());
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
         if (doRemap) {
-            System.out.println("Remapping 'Minecraft " + versionData.id + "' using '" + mcCfg.mappingsSource.get() + "' mappings");
+            System.out.println(
+                    "Remapping 'Minecraft " + versionData.id +
+                            "' using '" + mcCfg.mappingsSource.get() + "' mappings"
+            );
+
             try {
-                Files.write(remappedInfo.toPath(), mcCfg.mappingsSource.get().getBytes(StandardCharsets.UTF_8));
+                Files.write(
+                        remappedInfo.toPath(),
+                        mcCfg.mappingsSource.get().getBytes(StandardCharsets.UTF_8)
+                );
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
             IMapping mapping = Mappings.getMappings(project, versionData, mcCfg);
 
-            JarRemapper.applyBareMapping(clientFile, remappedClientFile, mapping, false);
+            JarRemapper.applyBareMapping(
+                    clientFile,
+                    remappedClientFile,
+                    mapping,
+                    false
+            );
         }
+
         dependencies.add("implementation", project.files(remappedClientFile));
     }
 
@@ -164,6 +241,7 @@ public class MinecraftSetup {
         if (!clientJar.isFile() && version.downloads.client != null) {
             try {
                 File parent = clientJar.getParentFile();
+
                 if (!parent.isDirectory() && !parent.mkdirs()) {
                     throw new IOException("Could not create directory: " + parent);
                 }
@@ -171,8 +249,12 @@ public class MinecraftSetup {
                 try (InputStream input = version.downloads.client.url.openStream()) {
                     Files.copy(input, clientJar.toPath());
                 }
+
             } catch (IOException e) {
-                throw new RuntimeException("Failed to download Minecraft " + version.id, e);
+                throw new RuntimeException(
+                        "Failed to download Minecraft " + version.id,
+                        e
+                );
             }
         }
 
@@ -184,34 +266,48 @@ public class MinecraftSetup {
         }
     }
 
-    private static void applyManifestVersionConstraints(Project project, Library[] libraries) {
-        // Build a lookup map of group:name -> version straight from the manifest
-        Map<String, String> requiredVersions = getRequiredVersionsMap(libraries);
+    private static void applyManifestVersionConstraints(
+            Project project,
+            Library[] libraries
+    ) {
+        Map<String, String> requiredVersions =
+                getRequiredVersionsMap(libraries);
 
-        // Apply globally across all configurations so transitive bumps are clamped
-        project.getConfigurations().all(configuration -> configuration.getResolutionStrategy().eachDependency(details -> {
-            String requestedKey = details.getRequested().getGroup() + ":" + details.getRequested().getName();
+        project.getConfigurations().all(configuration ->
+                configuration.getResolutionStrategy().eachDependency(details -> {
+                    String requestedKey =
+                            details.getRequested().getGroup() + ":" +
+                                    details.getRequested().getName();
 
-            if (requiredVersions.containsKey(requestedKey)) {
-                String forcedVersion = requiredVersions.get(requestedKey);
-                details.useVersion(forcedVersion);
-                details.because("Locked automatically to match Minecraft version requirements.");
-            }
-        }));
+                    if (requiredVersions.containsKey(requestedKey)) {
+                        String forcedVersion = requiredVersions.get(requestedKey);
+
+                        details.useVersion(forcedVersion);
+                        details.because(
+                                "Locked automatically to match Minecraft version requirements."
+                        );
+                    }
+                })
+        );
     }
 
-    private static @NotNull Map<String, String> getRequiredVersionsMap(Library[] libraries) {
-        Map<String, String> requiredVersions = new java.util.HashMap<>();
+    private static @NotNull Map<String, String> getRequiredVersionsMap(
+            Library[] libraries
+    ) {
+        Map<String, String> requiredVersions = new HashMap<>();
 
         for (Library lib : libraries) {
             String[] parts = lib.name.split("[:@]");
+
             if (parts.length >= 3) {
                 String group = parts[0];
                 String name = parts[1];
                 String version = parts[2];
+
                 requiredVersions.put(group + ":" + name, version);
             }
         }
+
         return requiredVersions;
     }
 
@@ -236,7 +332,7 @@ public class MinecraftSetup {
         File nativeMarker = new File(nativeDir, ".native-architecture");
 
         String architecture = OSUtil.osId + "-" +
-                System.getProperty("os.arch").toLowerCase(java.util.Locale.ROOT);
+                System.getProperty("os.arch").toLowerCase(Locale.ROOT);
 
         boolean extractNatives = true;
 
@@ -250,23 +346,29 @@ public class MinecraftSetup {
                 extractNatives = !architecture.equals(previousArchitecture);
             }
 
-            // Remove natives from a previous architecture.
             if (extractNatives && nativeDir.exists()) {
                 clearDirectory(nativeDir);
             }
 
             if (!nativeDir.isDirectory() && !nativeDir.mkdirs()) {
-                throw new IOException("Could not create native directory: " + nativeDir);
+                throw new IOException(
+                        "Could not create native directory: " + nativeDir
+                );
             }
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to prepare native directory", e);
+            throw new RuntimeException(
+                    "Failed to prepare native directory",
+                    e
+            );
         }
 
         List<Library> toBeRemapped = new ArrayList<>();
 
         for (Library library : libraries) {
-            if (library.downloads != null && library.downloads.artifact != null) {
+            if (library.downloads != null
+                    && library.downloads.artifact != null) {
+
                 if (library.name.contains("com.mojang")) {
                     toBeRemapped.add(library);
                 } else {
@@ -281,7 +383,6 @@ public class MinecraftSetup {
                 continue;
             }
 
-            // Resolve the architecture-specific native artifact.
             Artifact artifact = library.getNativeArtifact();
 
             if (artifact == null) {
@@ -296,7 +397,9 @@ public class MinecraftSetup {
                     File parent = nativeJar.getParentFile();
 
                     if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("Could not create directory: " + parent);
+                        throw new IOException(
+                                "Could not create directory: " + parent
+                        );
                     }
 
                     try (InputStream input = artifact.url.openStream()) {
@@ -308,12 +411,12 @@ public class MinecraftSetup {
 
             } catch (IOException e) {
                 throw new RuntimeException(
-                        "Failed to process native library: " + filename, e
+                        "Failed to process native library: " + filename,
+                        e
                 );
             }
         }
 
-        // Only write the marker after every native has been extracted.
         if (extractNatives) {
             try {
                 Files.write(
@@ -321,7 +424,10 @@ public class MinecraftSetup {
                         architecture.getBytes(StandardCharsets.UTF_8)
                 );
             } catch (IOException e) {
-                throw new RuntimeException("Failed to write native marker", e);
+                throw new RuntimeException(
+                        "Failed to write native marker",
+                        e
+                );
             }
         }
 
@@ -335,6 +441,10 @@ public class MinecraftSetup {
             File nativeJar
     ) {
         File nativeDir = FileUtil.getVersionNativesFolder(project, client.id);
+
+        Path nativeRoot = nativeDir.toPath()
+                .toAbsolutePath()
+                .normalize();
 
         try (ZipInputStream zip = new ZipInputStream(
                 Files.newInputStream(nativeJar.toPath())
@@ -352,7 +462,6 @@ public class MinecraftSetup {
                     continue;
                 }
 
-                // Read the ELF header before extracting the file.
                 byte[] header = new byte[20];
                 int headerLength = 0;
 
@@ -370,7 +479,6 @@ public class MinecraftSetup {
                     headerLength += read;
                 }
 
-                // Skip incompatible ELF binaries.
                 if (!ELFUtil.isCompatibleElf(header, headerLength)) {
                     System.out.println(
                             "Skipping incompatible native binary: " + name
@@ -378,20 +486,26 @@ public class MinecraftSetup {
                     continue;
                 }
 
-                File output = new File(nativeDir, name);
+                Path outputPath = nativeRoot.resolve(name)
+                        .toAbsolutePath()
+                        .normalize();
 
-                // Prevent ZIP entries from escaping the native directory.
-                if (!output.toPath().normalize().startsWith(nativeDir.toPath().normalize())) {
-                    throw new IOException("Invalid native archive entry: " + name);
+                if (!outputPath.startsWith(nativeRoot)) {
+                    throw new IOException(
+                            "Invalid native archive entry: " + name
+                    );
                 }
 
+                File output = outputPath.toFile();
                 File parent = output.getParentFile();
 
                 if (!parent.isDirectory() && !parent.mkdirs()) {
-                    throw new IOException("Could not create directory: " + parent);
+                    throw new IOException(
+                            "Could not create directory: " + parent
+                    );
                 }
 
-                try (OutputStream out = Files.newOutputStream(output.toPath())) {
+                try (OutputStream out = Files.newOutputStream(outputPath)) {
                     out.write(header, 0, headerLength);
 
                     byte[] buffer = new byte[8192];
@@ -404,7 +518,10 @@ public class MinecraftSetup {
             }
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to extract natives from " + nativeJar, e);
+            throw new RuntimeException(
+                    "Failed to extract natives from " + nativeJar,
+                    e
+            );
         }
     }
 
@@ -427,10 +544,10 @@ public class MinecraftSetup {
             return;
         }
 
-        try (java.util.stream.Stream<java.nio.file.Path> paths =
+        try (java.util.stream.Stream<Path> paths =
                      Files.walk(directory.toPath())) {
 
-            paths.sorted(java.util.Comparator.reverseOrder())
+            paths.sorted(Comparator.reverseOrder())
                     .filter(path -> !path.equals(directory.toPath()))
                     .forEach(path -> {
                         try {
@@ -443,5 +560,126 @@ public class MinecraftSetup {
         } catch (UncheckedIOException e) {
             throw e.getCause();
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Minecraft Asset Downloading
+    // -------------------------------------------------------------------------
+
+    public static void downloadAssets(File assetsDir, VersionData versionData) {
+        File indexesDir = new File(assetsDir, "indexes");
+        File objectsDir = new File(assetsDir, "objects");
+
+        File assetsManifest = new File(
+                indexesDir,
+                versionData.assetIndex.id + ".json"
+        );
+
+        try {
+            Files.createDirectories(indexesDir.toPath());
+            Files.createDirectories(objectsDir.toPath());
+
+            String manifestData;
+
+            if (assetsManifest.isFile()) {
+                manifestData = new String(
+                        Files.readAllBytes(assetsManifest.toPath()),
+                        StandardCharsets.UTF_8
+                );
+            } else {
+                try (InputStream input = versionData.assetIndex.url.openStream()) {
+                    byte[] bytes = readAllBytes(input);
+
+                    Files.write(assetsManifest.toPath(), bytes);
+
+                    manifestData = new String(
+                            bytes,
+                            StandardCharsets.UTF_8
+                    );
+                }
+            }
+
+            AssetsManifest manifest = VersionResolver.GSON_LOCAL.get()
+                    .fromJson(manifestData, AssetsManifest.class);
+
+            Path objectsPath = objectsDir.toPath()
+                    .toAbsolutePath()
+                    .normalize();
+
+            List<Callable<Void>> tasks = new ArrayList<>();
+
+            for (Map.Entry<String, Asset> entry :
+                    manifest.objects.entrySet()) {
+
+                tasks.add(makeDownloadTask(objectsPath, entry.getValue().hash));
+            }
+
+            System.out.println("Downloading Minecraft assets...");
+
+            List<Future<Void>> futures = assetDownloadService.invokeAll(tasks);
+
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+
+            System.out.println("Minecraft assets finished downloading!");
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            throw new RuntimeException(
+                    "Minecraft asset downloading was interrupted",
+                    e
+            );
+
+        } catch (ExecutionException | IOException e) {
+            throw new RuntimeException(
+                    "Failed to download Minecraft assets",
+                    e
+            );
+        }
+    }
+
+    private static Callable<Void> makeDownloadTask(
+            Path objectsDir,
+            String hash
+    ) {
+        String subDir = hash.substring(0, 2);
+
+        Path subPath = objectsDir.resolve(subDir);
+        Path output = subPath.resolve(hash);
+
+        return () -> {
+            if (Files.isRegularFile(output)) {
+                return null;
+            }
+
+            Files.createDirectories(subPath);
+
+            String fileUrl = assetsUrl + subDir + "/" + hash;
+
+            try (InputStream input = URI.create(fileUrl).toURL().openStream()) {
+                try {
+                    Files.copy(input, output);
+                } catch (java.nio.file.FileAlreadyExistsException ignored) {
+                    // Another download task may have created the same object.
+                }
+            }
+
+            return null;
+        };
+    }
+
+    private static byte[] readAllBytes(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[8192];
+        int read;
+
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+        }
+
+        return output.toByteArray();
     }
 }

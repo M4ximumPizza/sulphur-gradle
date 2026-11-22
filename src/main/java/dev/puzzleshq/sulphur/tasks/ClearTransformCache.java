@@ -8,7 +8,7 @@ import org.gradle.api.tasks.TaskAction;
 public class ClearTransformCache extends DefaultTask {
 
     public ClearTransformCache() {
-        setGroup("slime/clean");
+        setGroup(TaskGroups.clean);
     }
 
     @TaskAction

@@ -2,11 +2,11 @@ package dev.puzzleshq.sulphur;
 
 import com.google.gson.Gson;
 import dev.puzzleshq.lunar.ConfigPair;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import dev.puzzleshq.sulphur.config.MinecraftConfig;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
-import dev.puzzleshq.sulphur.minecraft.manifest.Version;
-import dev.puzzleshq.sulphur.minecraft.manifest.VersionManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.Version;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.VersionManifest;
 import dev.puzzleshq.sulphur.util.FileUtil;
 import dev.puzzleshq.sulphur.util.JavaUtils;
 import org.gradle.api.Project;

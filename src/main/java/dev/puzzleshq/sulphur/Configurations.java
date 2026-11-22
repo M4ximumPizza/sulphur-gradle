@@ -63,6 +63,10 @@ public class Configurations {
         if (refreshDepsManifest) {
             PuzzleVersionManifest versionManifest = VersionResolver.GSON_LOCAL.get().fromJson(manifestData, PuzzleVersionManifest.class);
             PuzzleVersion v = versionManifest.versions.get(version);
+            if (v == null) {
+                System.err.println("Could not find puzzle version '" + version + "' in manifest, maybe try clearing your cache and then reloading.");
+                return;
+            }
 
             Files.write(depsFileEpoc.toPath(), String.valueOf(System.currentTimeMillis()).getBytes(StandardCharsets.UTF_8));
             try (InputStream stream = v.dependencies.openStream()) {

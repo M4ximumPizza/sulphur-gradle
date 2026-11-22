@@ -16,6 +16,15 @@ public class FileUtil {
     private static File mappingsDir;
     private static File puzzleManifests;
     private static File minecraftManifests;
+    private static File assetsDir;
+
+    public static File getAssetsDir(Project project) {
+        if (assetsDir != null) return assetsDir;
+        File assetsDir = new File(getSlimeCache(project), "assets");
+        if (!assetsDir.exists()) assetsDir.mkdirs();
+        FileUtil.assetsDir = assetsDir;
+        return assetsDir;
+    }
 
     public static File getSlimeCache(Project project) {
         if (slimeCache != null) return slimeCache;

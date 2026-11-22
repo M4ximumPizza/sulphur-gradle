@@ -4,9 +4,9 @@ import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.sulphur.VersionResolver;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
 import dev.puzzleshq.sulphur.minecraft.MinecraftSetup;
-import dev.puzzleshq.sulphur.minecraft.manifest.Version;
-import dev.puzzleshq.sulphur.minecraft.manifest.VersionManifest;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.Version;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.VersionManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
@@ -15,7 +15,7 @@ import org.gradle.api.tasks.TaskAction;
 public class RetransformTask extends DefaultTask {
 
     public RetransformTask() {
-        setGroup("slime/transform");
+        setGroup(TaskGroups.transform);
     }
 
     @TaskAction
