@@ -71,7 +71,7 @@ public abstract class RunClientTask extends JavaExec {
                 s = s.replaceAll("\\$\\{auth_session}", "");
                 s = s.replaceAll("\\$\\{game_directory}", gameDir);
                 s = s.replaceAll("\\$\\{game_assets}", assetsDir);
-                s = s.replaceAll("\\$\\{version_type}", versionData.type + " + Puzzle");
+                s = s.replaceAll("\\$\\{version_type}", "sulphur-dev");
                 newArgs.add(s);
             }
             args(newArgs);
@@ -92,7 +92,7 @@ public abstract class RunClientTask extends JavaExec {
                 s = s.replaceAll("\\$\\{assets_index_name}", versionData.assets);
                 s = s.replaceAll("\\$\\{auth_uuid}", UUID.randomUUID().toString());
                 s = s.replaceAll("\\$\\{user_type}", "msa");
-                s = s.replaceAll("\\$\\{version_type}", versionData.type + " + Puzzle");
+                s = s.replaceAll("\\$\\{version_type}", "sulphur-dev");
                 s = s.replaceAll("\\$\\{version_name}", versionData.id);
                 newArgs.add(s);
             }
