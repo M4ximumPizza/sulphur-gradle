@@ -1,7 +1,7 @@
-package dev.puzzleshq.sulphur.minecraft.manifest.client;
+package dev.puzzleshq.sulphur.minecraft.manifest.version.client;
 
-import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Library;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.logging.Logging;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries.Library;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.logging.Logging;
 
 import java.util.Arrays;
 

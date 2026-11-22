@@ -1,22 +1,21 @@
-package dev.puzzleshq.sulphur.minecraft.manifest.client;
+package dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries;
 
+import java.io.File;
 import java.net.URL;
 
-public class AssetIndex {
+public class Artifact {
 
-    public String id;
+    public String path;
     public String sha1;
     public long size;
-    public long totalSize;
     public URL url;
 
     @Override
     public String toString() {
-        return "AssetIndex{" +
-                "id='" + id + '\'' +
+        return "Artifact{" +
+                "path=" + path +
                 ", sha1='" + sha1 + '\'' +
                 ", size=" + size +
-                ", totalSize=" + totalSize +
                 ", url=" + url +
                 '}';
     }

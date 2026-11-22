@@ -1,8 +1,8 @@
-package dev.puzzleshq.sulphur.minecraft.manifest;
+package dev.puzzleshq.sulphur.minecraft.manifest.version;
 
 import java.util.Arrays;
 
-public final class VersionManifest {
+public class VersionManifest {
 
     public Latest latest;
     public Version[] versions;

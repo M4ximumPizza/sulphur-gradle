@@ -16,7 +16,7 @@ public abstract class ReobfuscateTask extends DefaultTask {
 
     @Inject
     public ReobfuscateTask() {
-        setGroup("slime/build");
+        setGroup(TaskGroups.build);
     }
 
     @Internal

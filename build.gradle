@@ -36,11 +36,11 @@ dependencies {
 
     implementation "dev.puzzleshq:lunar-config:1.0.2"
 
-    implementation "org.ow2.asm:asm:9.8"
-    implementation "org.ow2.asm:asm-tree:9.8"
-    implementation "org.ow2.asm:asm-util:9.8"
-    implementation "org.ow2.asm:asm-analysis:9.8"
-    implementation "org.ow2.asm:asm-commons:9.8"
+    implementation "org.ow2.asm:asm:${asm_version}"
+    implementation "org.ow2.asm:asm-tree:${asm_version}"
+    implementation "org.ow2.asm:asm-util:${asm_version}"
+    implementation "org.ow2.asm:asm-analysis:${asm_version}"
+    implementation "org.ow2.asm:asm-commons:${asm_version}"
 
     implementation "dev.puzzleshq:access-writer:1.0.4+c"
     implementation "dev.puzzleshq:mod-format-framework:1.0.0"

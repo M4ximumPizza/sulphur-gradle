@@ -1,4 +1,4 @@
-package dev.puzzleshq.sulphur.minecraft.manifest;
+package dev.puzzleshq.sulphur.minecraft.manifest.version;
 
 public class Latest {
     public String release;

@@ -1,6 +1,6 @@
-import dev.puzzleshq.sulphur.minecraft.manifest.Latest;
-import dev.puzzleshq.sulphur.minecraft.manifest.Version;
-import dev.puzzleshq.sulphur.minecraft.manifest.VersionManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.Latest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.Version;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.VersionManifest;
 
 import static dev.puzzleshq.sulphur.VersionResolver.GSON_LOCAL;
 

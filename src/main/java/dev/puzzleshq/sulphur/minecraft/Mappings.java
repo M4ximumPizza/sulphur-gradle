@@ -3,7 +3,7 @@ package dev.puzzleshq.sulphur.minecraft;
 import dev.puzzleshq.gibberishdefiner.mapping.IMapping;
 import dev.puzzleshq.gibberishdefiner.mapping.impl.Mapping;
 import dev.puzzleshq.sulphur.config.MinecraftConfig;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import org.gradle.api.Project;
 
 import java.util.Map;

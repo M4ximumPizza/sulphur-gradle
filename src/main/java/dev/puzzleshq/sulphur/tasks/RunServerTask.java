@@ -3,7 +3,7 @@ package dev.puzzleshq.sulphur.tasks;
 import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.sulphur.VersionResolver;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import dev.puzzleshq.sulphur.util.FileUtil;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -13,7 +13,7 @@ import java.io.File;
 public abstract class RunServerTask extends JavaExec {
 
     public RunServerTask() {
-        setGroup("slime/run");
+        setGroup(TaskGroups.run);
 
         File runDir = getProject().file("run");
 

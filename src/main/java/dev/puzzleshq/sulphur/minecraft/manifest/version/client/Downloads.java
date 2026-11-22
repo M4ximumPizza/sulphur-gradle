@@ -1,4 +1,4 @@
-package dev.puzzleshq.sulphur.minecraft.manifest.client;
+package dev.puzzleshq.sulphur.minecraft.manifest.version.client;
 
 public class Downloads {
 

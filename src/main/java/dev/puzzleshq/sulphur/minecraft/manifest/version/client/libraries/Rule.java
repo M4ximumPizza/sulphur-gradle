@@ -1,4 +1,4 @@
-package dev.puzzleshq.sulphur.minecraft.manifest.client.libraries;
+package dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries;
 
 public class Rule {
 

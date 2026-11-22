@@ -5,7 +5,7 @@ import dev.puzzleshq.gibberishdefiner.util.MappingUtil;
 import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.sulphur.config.MinecraftConfig;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import dev.puzzleshq.sulphur.util.FileUtil;
 import dev.puzzleshq.sulphur.util.JavaUtils;
 import net.fabricmc.mappingio.format.MappingFormat;

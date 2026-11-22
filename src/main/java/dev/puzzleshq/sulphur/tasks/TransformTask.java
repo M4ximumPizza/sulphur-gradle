@@ -16,7 +16,7 @@ public class TransformTask extends DefaultTask {
     private static final Logger log = LoggerFactory.getLogger(TransformTask.class);
 
     public TransformTask() {
-        setGroup("slime/transform");
+        setGroup(TaskGroups.transform);
     }
 
     @TaskAction

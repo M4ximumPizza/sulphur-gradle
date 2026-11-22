@@ -6,11 +6,13 @@ import dev.puzzleshq.lunar.ConfigPair;
 import dev.puzzleshq.sulphur.VersionResolver;
 import dev.puzzleshq.sulphur.config.MinecraftConfig;
 import dev.puzzleshq.sulphur.config.SulpherConfig;
-import dev.puzzleshq.sulphur.minecraft.manifest.Version;
-import dev.puzzleshq.sulphur.minecraft.manifest.VersionManifest;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Artifact;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Library;
+import dev.puzzleshq.sulphur.minecraft.manifest.assets.Asset;
+import dev.puzzleshq.sulphur.minecraft.manifest.assets.AssetsManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.Version;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.VersionManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries.Artifact;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.libraries.Library;
 import dev.puzzleshq.sulphur.transform.LocalMaven;
 import dev.puzzleshq.sulphur.transform.SulphurConfigurations;
 import dev.puzzleshq.sulphur.util.FileUtil;
@@ -23,11 +25,17 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -147,7 +155,7 @@ public class MinecraftSetup {
     }
 
     private static @NotNull Map<String, String> getRequiredVersionsMap(Library[] libraries) {
-        Map<String, String> requiredVersions = new java.util.HashMap<>();
+        Map<String, String> requiredVersions = new HashMap<>();
 
         for (Library lib : libraries) {
             // lib.name is typically in standard Maven format: "group:name:version"
@@ -248,5 +256,73 @@ public class MinecraftSetup {
             throw new RuntimeException(e);
         }
     }
-    
+
+    public static final String assetsUrl = "https://resources.download.minecraft.net/";
+    private static final ExecutorService service = Executors.newFixedThreadPool(4);
+
+    public static void downloadAssets(File assetsDir, VersionData versionData) {
+        File indexesDir = new File(assetsDir, "indexes");
+        File objectsDir = new File(assetsDir, "objects");
+        if (!objectsDir.exists()) objectsDir.mkdirs();
+        File assetsManifest = new File(indexesDir, versionData.assetIndex.id + ".json");
+        String manifestData = "";
+        if (assetsManifest.exists()) {
+            try (InputStream input = Files.newInputStream(assetsManifest.getAbsoluteFile().toPath())) {
+                manifestData = new String(JavaUtils.readAllBytes(input));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (manifestData.isEmpty() || !assetsManifest.exists()) {
+            assetsManifest.getParentFile().mkdirs();
+            try (InputStream input = versionData.assetIndex.url.openStream()) {
+                assetsManifest.createNewFile();
+                byte[] bytes = JavaUtils.readAllBytes(input);
+                Files.write(assetsManifest.getAbsoluteFile().toPath(), bytes, StandardOpenOption.WRITE);
+                manifestData = new String(bytes);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        Path objectsPath = objectsDir.getAbsoluteFile().toPath();
+
+        List<Callable<Void>> toDownload = new ArrayList<>();
+
+        AssetsManifest manifest = VersionResolver.GSON_LOCAL.get().fromJson(manifestData, AssetsManifest.class);
+        Set<Map.Entry<String, Asset>> entries = manifest.objects.entrySet();
+        for (Map.Entry<String, Asset> entry : entries) {
+            toDownload.add(makeDownloadTask(objectsPath, entry.getValue().hash));
+        }
+        try {
+            System.out.println("Downloading Assets");
+            service.invokeAll(toDownload);
+            System.out.println("Assets finished downloading!");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Callable<Void> makeDownloadTask(Path objectsDir, String hash) {
+        String subDir = hash.substring(0, 2);
+        Path subPath = objectsDir.resolve(subDir);
+        if (Files.notExists(subPath)) {
+            try {
+                Files.createDirectories(subPath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return () -> {
+            String fileUrl = assetsUrl + subDir + "/" + hash;
+            try (InputStream input = URI.create(fileUrl).toURL().openStream()) {
+                Files.copy(input, subPath.resolve(hash));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return null;
+        };
+    }
 }

@@ -1,7 +1,7 @@
-package dev.puzzleshq.sulphur.minecraft.manifest;
+package dev.puzzleshq.sulphur.minecraft.manifest.version;
 
 import dev.puzzleshq.sulphur.VersionResolver;
-import dev.puzzleshq.sulphur.minecraft.manifest.client.VersionData;
+import dev.puzzleshq.sulphur.minecraft.manifest.version.client.VersionData;
 import org.gradle.api.Project;
 
 import java.net.URL;
