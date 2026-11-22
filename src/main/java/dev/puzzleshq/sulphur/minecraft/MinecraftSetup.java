@@ -13,11 +13,10 @@ import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Artifact;
 import dev.puzzleshq.sulphur.minecraft.manifest.client.libraries.Library;
 import dev.puzzleshq.sulphur.transform.LocalMaven;
 import dev.puzzleshq.sulphur.transform.SulphurConfigurations;
+import dev.puzzleshq.sulphur.util.ELFUtil;
 import dev.puzzleshq.sulphur.util.FileUtil;
-import dev.puzzleshq.sulphur.util.JavaUtils;
 import dev.puzzleshq.sulphur.util.OSUtil;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.ResolvableDependencies;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import org.jetbrains.annotations.NotNull;
@@ -205,7 +204,6 @@ public class MinecraftSetup {
         Map<String, String> requiredVersions = new java.util.HashMap<>();
 
         for (Library lib : libraries) {
-            // lib.name is typically in standard Maven format: "group:name:version"
             String[] parts = lib.name.split("[:@]");
             if (parts.length >= 3) {
                 String group = parts[0];
@@ -237,7 +235,8 @@ public class MinecraftSetup {
 
         File nativeMarker = new File(nativeDir, ".native-architecture");
 
-        String architecture = OSUtil.osId + "-" + OSUtil.ARCH_BITS;
+        String architecture = OSUtil.osId + "-" +
+                System.getProperty("os.arch").toLowerCase(java.util.Locale.ROOT);
 
         boolean extractNatives = true;
 
@@ -353,6 +352,32 @@ public class MinecraftSetup {
                     continue;
                 }
 
+                // Read the ELF header before extracting the file.
+                byte[] header = new byte[20];
+                int headerLength = 0;
+
+                while (headerLength < header.length) {
+                    int read = zip.read(
+                            header,
+                            headerLength,
+                            header.length - headerLength
+                    );
+
+                    if (read == -1) {
+                        break;
+                    }
+
+                    headerLength += read;
+                }
+
+                // Skip incompatible ELF binaries.
+                if (!ELFUtil.isCompatibleElf(header, headerLength)) {
+                    System.out.println(
+                            "Skipping incompatible native binary: " + name
+                    );
+                    continue;
+                }
+
                 File output = new File(nativeDir, name);
 
                 // Prevent ZIP entries from escaping the native directory.
@@ -366,8 +391,16 @@ public class MinecraftSetup {
                     throw new IOException("Could not create directory: " + parent);
                 }
 
-                Files.copy(zip, output.toPath(),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                try (OutputStream out = Files.newOutputStream(output.toPath())) {
+                    out.write(header, 0, headerLength);
+
+                    byte[] buffer = new byte[8192];
+                    int read;
+
+                    while ((read = zip.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                    }
+                }
             }
 
         } catch (IOException e) {
@@ -403,11 +436,11 @@ public class MinecraftSetup {
                         try {
                             Files.delete(path);
                         } catch (IOException e) {
-                            throw new java.io.UncheckedIOException(e);
+                            throw new UncheckedIOException(e);
                         }
                     });
 
-        } catch (java.io.UncheckedIOException e) {
+        } catch (UncheckedIOException e) {
             throw e.getCause();
         }
     }
