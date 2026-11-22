@@ -1,5 +1,4 @@
-## Sulphur Gradle <br>
-###### Dev environment for Puzzle on Minecraft <br>
+<h3 style='display: inline'>Sulphur Gradle</h4> - <h6 style='display: inline'>Dev environment for Puzzle on Minecraft</h4> <br>
 ___
 - To use `test-project` you may want to link its `build.gradle` in intellij
 
