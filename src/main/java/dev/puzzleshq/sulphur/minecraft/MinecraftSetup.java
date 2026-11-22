@@ -36,54 +36,92 @@ public class MinecraftSetup {
 
     public static void loadMinecraft(Project project, DependencyHandler handler, ConfigPair<SulpherConfig> pair) {
         SulpherConfig config = pair.getConfig();
+        MinecraftConfig minecraft = config.minecraft;
 
         VersionManifest manifest = VersionResolver.getManifest(project, pair);
-        Version version = manifest.find(config.minecraft.minecraftVersion.get());
+        Version version = manifest.find(minecraft.minecraftVersion.get());
+        VersionData client = version.get(project);
+
         System.out.println("Found '" + manifest.versions.length + "' minecraft versions!");
         System.out.println("Found version '" + version.type + " " + version.id + "'");
 
-        VersionData client = version.get(project);
+        List<Library> libraries = loadLibrariesForVersion(project, handler, client);
+        boolean remapping = !"none".equals(minecraft.mappingsSource.get());
 
-        List<Library> toBeRemapped = loadLibrariesForVersion(project, handler, client);
-        if (config.minecraft.mappingsSource.get().equals("none")) {
-            downloadJars(project, handler, client, true);
-            for (Library library : toBeRemapped) {
-                handler.add(SulphurConfigurations.nonTransitiveInclude, library.name);
-            }
+        downloadJars(project, handler, client, !remapping);
 
-            project.afterEvaluate((p) -> {
-                ResolvableDependencies incoming = SulphurConfigurations.apiRemapConfiguration.getIncoming();
-                for (ResolvedArtifactResult artifact : incoming.getArtifacts()) {
-                    File inFile = artifact.getFile();
-                    handler.add(SulphurConfigurations.nonTransitiveInclude, inFile);
-                }
-            });
-        } else {
-            downloadJars(project, handler, client, false);
-            remapJars(project, handler, client, config.minecraft);
+        if (!remapping) {
+            libraries.forEach(library ->
+                    handler.add(SulphurConfigurations.nonTransitiveInclude, library.name)
+            );
 
-            for (Library library : toBeRemapped) {
-                handler.add(SulphurConfigurations.internalRemapConfigurationName, library.name);
-                File a = LocalMaven.getArtifactFile(project, LocalMaven.transformName(library.name));
-                if (a.exists()) {
-                    handler.add(SulphurConfigurations.nonTransitiveInclude, project.files(a));
-                }
-            }
-
-            project.afterEvaluate((p) -> {
-                ResolvableDependencies incoming = SulphurConfigurations.apiRemapConfiguration.getIncoming();
-                for (ResolvedArtifactResult artifact : incoming.getArtifacts()) {
-                    File inFile = artifact.getFile();
-                    File file = LocalMaven.getArtifactDir(project, LocalMaven.transformName("files:" + inFile.getName().substring(0, inFile.getName().lastIndexOf('.')) + ":0.0.0"));
-                    if (!file.exists()) file.mkdirs();
-                    File remappedJar = new File(file, inFile.getName().replaceAll("\\.jar", "-remapped.jar"));
-                    if (remappedJar.exists()) {
-                        handler.add(SulphurConfigurations.nonTransitiveInclude, project.files(remappedJar));
-                    }
-                }
-            });
-
+            registerUnmappedDependencies(project, handler);
+            return;
         }
+
+        remapJars(project, handler, client, minecraft);
+
+        for (Library library : libraries) {
+            handler.add(SulphurConfigurations.internalRemapConfigurationName, library.name);
+
+            File remapped = LocalMaven.getArtifactFile(
+                    project,
+                    LocalMaven.transformName(library.name)
+            );
+
+            if (remapped.isFile()) {
+                handler.add(SulphurConfigurations.nonTransitiveInclude, project.files(remapped));
+            }
+        }
+
+        registerRemappedDependencies(project, handler);
+    }
+
+    private static void registerUnmappedDependencies(Project project, DependencyHandler handler) {
+        project.afterEvaluate(p -> {
+            for (ResolvedArtifactResult artifact :
+                    SulphurConfigurations.apiRemapConfiguration
+                            .getIncoming()
+                            .getArtifacts()) {
+
+                handler.add(
+                        SulphurConfigurations.nonTransitiveInclude,
+                        artifact.getFile()
+                );
+            }
+        });
+    }
+
+    private static void registerRemappedDependencies(Project project, DependencyHandler handler) {
+        project.afterEvaluate(p -> {
+            for (ResolvedArtifactResult artifact :
+                    SulphurConfigurations.apiRemapConfiguration
+                            .getIncoming()
+                            .getArtifacts()) {
+
+                File input = artifact.getFile();
+                String filename = input.getName();
+
+                int extension = filename.lastIndexOf('.');
+                String artifactName = extension == -1
+                        ? filename
+                        : filename.substring(0, extension);
+
+                File directory = LocalMaven.getArtifactDir(
+                        project,
+                        LocalMaven.transformName("files:" + artifactName + ":0.0.0")
+                );
+
+                File remapped = new File(directory, artifactName + "-remapped.jar");
+
+                if (remapped.isFile()) {
+                    handler.add(
+                            SulphurConfigurations.nonTransitiveInclude,
+                            project.files(remapped)
+                    );
+                }
+            }
+        });
     }
 
     public static void remapJars(Project project, DependencyHandler dependencies, VersionData versionData, MinecraftConfig mcCfg) {
@@ -113,21 +151,38 @@ public class MinecraftSetup {
         dependencies.add("implementation", project.files(remappedClientFile));
     }
 
-    public static void downloadJars(Project project, DependencyHandler dependencies, VersionData versionData, boolean addDep) {
-        File clientFile = new File(FileUtil.getVersionFolder(project, versionData.id), "minecraft-" + versionData.id + "-client.jar");
+    public static void downloadJars(
+            Project project,
+            DependencyHandler dependencies,
+            VersionData version,
+            boolean addDependency
+    ) {
+        File clientJar = new File(
+                FileUtil.getVersionFolder(project, version.id),
+                "minecraft-" + version.id + "-client.jar"
+        );
 
-        if (versionData.downloads.client != null && !clientFile.exists()) {
-            try (InputStream stream = versionData.downloads.client.url.openStream()) {
-                byte[] bytes = JavaUtils.readAllBytes(stream);
-                FileOutputStream outputStream = new FileOutputStream(clientFile);
-                outputStream.write(bytes);
-                outputStream.close();
+        if (!clientJar.isFile() && version.downloads.client != null) {
+            try {
+                File parent = clientJar.getParentFile();
+                if (!parent.isDirectory() && !parent.mkdirs()) {
+                    throw new IOException("Could not create directory: " + parent);
+                }
+
+                try (InputStream input = version.downloads.client.url.openStream()) {
+                    Files.copy(input, clientJar.toPath());
+                }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to download Minecraft " + version.id, e);
             }
         }
-        if (clientFile.exists() && addDep)
-            dependencies.add("implementation", "com.mojang:minecraft:" + versionData.id + ":client");
+
+        if (addDependency && clientJar.isFile()) {
+            dependencies.add(
+                    "implementation",
+                    "com.mojang:minecraft:" + version.id + ":client"
+            );
+        }
     }
 
     private static void applyManifestVersionConstraints(Project project, Library[] libraries) {
@@ -162,91 +217,145 @@ public class MinecraftSetup {
         return requiredVersions;
     }
 
-    public static List<Library> loadLibrariesForVersion(Project project, DependencyHandler dependencies, VersionData client) {
-        Library[] validLibs = client.getValidLibraries();
-        System.out.println("Found '" + validLibs.length + "/" + client.libraries.length + "' valid libraries for this os '" + OSUtil.osId + "'");
+    public static List<Library> loadLibrariesForVersion(
+            Project project,
+            DependencyHandler dependencies,
+            VersionData client
+    ) {
+        Library[] libraries = client.getValidLibraries();
 
-        File wroteNatives = new File(FileUtil.getVersionNativesFolder(project, client.id), "i-wrote-natives-written.txt");
+        System.out.println(
+                "Found '" + libraries.length + "/" + client.libraries.length +
+                        "' valid libraries for this os '" + OSUtil.osId + "'"
+        );
 
-        applyManifestVersionConstraints(project, validLibs);
+        applyManifestVersionConstraints(project, libraries);
+
+        File nativeDir = FileUtil.getVersionNativesFolder(project, client.id);
+        File libraryDir = FileUtil.getVersionLibsFolder(project, client.id);
+        File nativeMarker = new File(nativeDir, "i-wrote-natives-written.txt");
+
+        boolean extractNatives = !nativeMarker.isFile();
 
         List<Library> toBeRemapped = new ArrayList<>();
-        for (Library validLib : validLibs) {
-            if (validLib.downloads.artifact != null) {
-                if (!validLib.name.contains("com.mojang")) {
-                    dependencies.add(SulphurConfigurations.nonTransitiveInclude, validLib.name);
+
+        for (Library library : libraries) {
+            if (library.downloads.artifact != null) {
+                if (library.name.contains("com.mojang")) {
+                    toBeRemapped.add(library);
                 } else {
-                    toBeRemapped.add(validLib);
+                    dependencies.add(
+                            SulphurConfigurations.nonTransitiveInclude,
+                            library.name
+                    );
                 }
             }
-            if (!validLib.usesNewFormat() && validLib.getNativeArtifactId() != null) {
-                if (wroteNatives.exists()) continue;
 
-                Artifact artifact = validLib.getNativeArtifact();
-                String fileName = new File(artifact.url.getFile()).getName();
-                File nativeFile = new File(FileUtil.getVersionLibsFolder(project, client.id), fileName);
-                if (nativeFile.exists()) {
-                    extract(project, validLib, client, nativeFile);
-                    continue;
-                }
-
-                byte[] bytes;
-                try (InputStream stream = artifact.url.openStream()) {
-                    bytes = JavaUtils.readAllBytes(stream);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                try {
-                    if (!nativeFile.getParentFile().exists()) nativeFile.getParentFile().mkdirs();
-                    nativeFile.createNewFile();
-                    FileOutputStream outputStream = new FileOutputStream(nativeFile);
-                    outputStream.write(bytes);
-                    outputStream.close();
-                    extract(project, validLib, client, nativeFile);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-//                dependencies.add("implementation", validLib.getNativeArtifactId());
+            if (!extractNatives || library.usesNewFormat()) {
+                continue;
             }
-        }
-        if (!wroteNatives.exists()) {
+
+            if (library.getNativeArtifactId() == null) {
+                continue;
+            }
+
+            Artifact artifact = library.getNativeArtifact();
+            String filename = new File(artifact.url.getFile()).getName();
+
+            File nativeJar = new File(libraryDir, filename);
+
             try {
-                wroteNatives.createNewFile();
+                if (!nativeJar.isFile()) {
+                    File parent = nativeJar.getParentFile();
+
+                    if (!parent.isDirectory() && !parent.mkdirs()) {
+                        throw new IOException("Could not create directory: " + parent);
+                    }
+
+                    try (InputStream input = artifact.url.openStream()) {
+                        Files.copy(input, nativeJar.toPath());
+                    }
+                }
+
+                extract(project, library, client, nativeJar);
+
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to process native library: " + filename, e);
             }
         }
+
+        if (extractNatives) {
+            try {
+                if (!nativeDir.isDirectory() && !nativeDir.mkdirs()) {
+                    throw new IOException("Could not create native directory: " + nativeDir);
+                }
+
+                Files.createFile(nativeMarker.toPath());
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create native extraction marker", e);
+            }
+        }
+
         return toBeRemapped;
     }
 
-    private static void extract(Project project, Library lib, VersionData client, File nativeFile) {
-        try {
-            ZipInputStream zipStream = new ZipInputStream(Files.newInputStream(nativeFile.toPath()));
-            ZipEntry zipEntry;
-            while ((zipEntry = zipStream.getNextEntry()) != null) {
-                if (zipEntry.isDirectory()) continue;
-                boolean excluded = false;
-                if (lib.extract != null) {
-                    for (String s : lib.extract.exclude) {
-                        if (zipEntry.getName().startsWith(s)) {
-                            excluded = true;
-                            break;
-                        }
-                    }
-                }
-                if (excluded) continue;
-                File file = new File(FileUtil.getVersionNativesFolder(project, client.id), zipEntry.getName());
-                if (!file.getParentFile().exists())
-                    file.getParentFile().mkdirs();
+    private static void extract(
+            Project project,
+            Library library,
+            VersionData client,
+            File nativeJar
+    ) {
+        File nativeDir = FileUtil.getVersionNativesFolder(project, client.id);
 
-                FileOutputStream fileOutputStream = new FileOutputStream(file);
-                fileOutputStream.write(JavaUtils.readAllBytes(zipStream));
-                fileOutputStream.close();
+        try (ZipInputStream zip = new ZipInputStream(
+                Files.newInputStream(nativeJar.toPath())
+        )) {
+            ZipEntry entry;
+
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+
+                String name = entry.getName();
+
+                if (isExcluded(library, name)) {
+                    continue;
+                }
+
+                File output = new File(nativeDir, name);
+
+                // Prevent ZIP entries from escaping the native directory.
+                if (!output.toPath().normalize().startsWith(nativeDir.toPath().normalize())) {
+                    throw new IOException("Invalid native archive entry: " + name);
+                }
+
+                File parent = output.getParentFile();
+
+                if (!parent.isDirectory() && !parent.mkdirs()) {
+                    throw new IOException("Could not create directory: " + parent);
+                }
+
+                Files.copy(zip, output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
-            zipStream.close();
+
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to extract natives from " + nativeJar, e);
         }
     }
-    
+
+    private static boolean isExcluded(Library library, String name) {
+        if (library.extract == null || library.extract.exclude == null) {
+            return false;
+        }
+
+        for (String excluded : library.extract.exclude) {
+            if (name.startsWith(excluded)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
