@@ -5,16 +5,14 @@
   "id": "test",
   "version": "1.0.0",
   "description": "Testing mod for 'slime' gradle",
-  "authors": [ "Mr-Zombii" ],
+  "authors": [ "You!" ],
   "entrypoints": {
-    "init": "dev.puzzleshq.craft.PLMinecraft"
+    "preLaunch": "com.example.test.TestPreLaunch"
   },
   "mixins": [
-    "craft.mixins.json"
   ],
   "depends": {
   },
   "access-writers": [
-    "craft.manipulator"
   ]
 }
