@@ -17,11 +17,12 @@ public class Library {
     public boolean shouldDownload() {
         if (name.contains("org.ow2.asm:")) return false;
         if (rules == null) return true;
+
         boolean allowed = false;
 
         for (Rule rule : rules) {
             if (rule.os == null || rule.os.isCorrectOs()) {
-                allowed = rule.action.equals("allow");
+                allowed = "allow".equals(rule.action);
             }
         }
 
@@ -29,27 +30,52 @@ public class Library {
     }
 
     public boolean usesNewFormat() {
-        return downloads.classifiers == null || natives == null;
+        return downloads == null ||
+                downloads.classifiers == null ||
+                natives == null;
     }
 
+    /**
+     * Resolves the native classifier for the current OS and JVM architecture.
+     */
+    public String getNativeClassifier() {
+        if (usesNewFormat() || OSUtil.osId == null) {
+            return null;
+        }
+
+        String classifier = natives.get(OSUtil.osId);
+
+        if (classifier == null) {
+            return null;
+        }
+
+        return classifier.replace("${arch}", OSUtil.archBits);
+    }
+
+    /**
+     * Gets the native artifact for the current architecture.
+     */
     public Artifact getNativeArtifact() {
-        if (usesNewFormat()) {
+        String classifier = getNativeClassifier();
+
+        if (classifier == null) {
             return null;
         }
 
-        String nativesClassifier = natives.get(OSUtil.osId);
-        return downloads.classifiers.get(nativesClassifier);
+        return downloads.classifiers.get(classifier);
     }
 
+    /**
+     * Gets the Maven dependency identifier for the native artifact.
+     */
     public String getNativeArtifactId() {
-        if (usesNewFormat()) {
+        String classifier = getNativeClassifier();
+
+        if (classifier == null) {
             return null;
         }
 
-        if (natives.get(OSUtil.osId) == null)
-            return null;
-
-        return name + ":" + (natives.get(OSUtil.osId).replaceAll("\\$\\{arch}", System.getProperty("os.arch").equals("x86") ? "32" : "64"));
+        return name + ":" + classifier;
     }
 
     @Override
