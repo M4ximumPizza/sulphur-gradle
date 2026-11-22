@@ -8,61 +8,173 @@ import org.gradle.api.Project;
 
 import java.util.Map;
 
-public class Mappings {
+public final class Mappings {
 
+    private static final String SEPARATOR = "~";
+
+    private Mappings() {
+        // Utility class
+    }
+
+    /**
+     * <p>Mappings without a named equivalent retain their intermediary
+     * name. Entries that cannot be resolved through intermediary mappings
+     * are preserved using their original owner/name.</p>
+     *
+     * @param intermediary obfuscated-to-intermediary mappings
+     * @param named intermediary-to-named mappings
+     * @return combined obfuscated-to-named mappings
+     *
+     * @author M4ximumPizza
+     * @author Mr Zombii
+     */
     public static IMapping getMappings(IMapping intermediary, IMapping named) {
         if (intermediary == null) return named;
         if (named == null) return null;
 
         IMapping combined = new Mapping();
-        IMapping inverseIntermediary = intermediary.reverse();
+        IMapping inverse = intermediary.reverse();
 
-        for (Map.Entry<String, String> classEntry : named.getClassEntries()) {
-            String intermediaryName = classEntry.getKey();
-            String namedName = classEntry.getValue();
-            if (inverseIntermediary.hasClass(intermediaryName) || !inverseIntermediary.mapClass(intermediaryName).equals(intermediaryName)) {
-                String obfName = inverseIntermediary.mapClass(intermediaryName);
-                combined.putClass(obfName, namedName);
-            } else {
-                // Fallback or log if an intermediary class has no obfuscated counterpart
-                combined.putClass(intermediaryName, namedName);
-            }
-//            combined.putClass(inverseIntermediary.mapClass(classEntry.getKey()), classEntry.getValue());
-        }
-        for (Map.Entry<String, String> fieldEntry : named.getFieldEntries()) {
-            String[] splitA = fieldEntry.getKey().split("~"); // intermediate
-            String[] splitB = fieldEntry.getValue().split("~"); // named
-            String[] splitC = inverseIntermediary.mapField(splitA[0], splitA[1]).split("~"); // obf
-            combined.putField(splitC[0], splitC[1], splitB[0], splitB[1]);
-        }
-        for (Map.Entry<String, String> methodEntry : named.getMethodEntries()) {
-            String[] splitA = methodEntry.getKey().split("~"); // intermediate
-            String[] splitB = methodEntry.getValue().split("~"); // named
-            String[] splitC = inverseIntermediary.mapMethod(splitA[0], splitA[1], splitA[2]).split("~"); // obf
-            combined.putMethod(splitC[0], splitC[1], splitC[2], splitB[0], splitB[1], splitB[2]);
-        }
-        for (Map.Entry<String, String> classEntry : intermediary.getClassEntries()) {
-            if (named.mapClass(classEntry.getValue()).equals(classEntry.getValue())) {
-                combined.putClass(classEntry.getKey(), classEntry.getValue());
-            }
-        }
-        for (Map.Entry<String, String> fieldEntry : intermediary.getFieldEntries()) {
-            String[] splitA = fieldEntry.getKey().split("~"); // obf
-            String b = fieldEntry.getValue(); // intermediate
-            String[] splitB = b.split("~"); // intermediate
-            if (named.mapField(splitB[0], splitB[1]).equals(b)) {
-                combined.putField(splitA[0], splitA[1], splitB[0], splitB[1]);
-            }
-        }
-        for (Map.Entry<String, String> methodEntry : intermediary.getMethodEntries()) {
-            String[] splitA = methodEntry.getKey().split("~"); // obf
-            String b = methodEntry.getValue(); // intermediate
-            String[] splitB = b.split("~"); // intermediate
-            if (named.mapMethod(splitB[0], splitB[1], splitB[2]).equals(b)) {
-                combined.putMethod(splitA[0], splitA[1], splitA[2], splitB[0], splitB[1], splitB[2]);
-            }
-        }
+        mergeClasses(combined, intermediary, named, inverse);
+        mergeFields(combined, intermediary, named, inverse);
+        mergeMethods(combined, intermediary, named, inverse);
+
         return combined;
+    }
+
+    private static void mergeClasses(
+            IMapping combined,
+            IMapping intermediary,
+            IMapping named,
+            IMapping inverse
+    ) {
+        // Convert intermediary -> named into obfuscated -> named.
+        for (Map.Entry<String, String> entry : named.getClassEntries()) {
+            String intermediaryName = entry.getKey();
+            String obfuscatedName = inverse.mapClass(intermediaryName);
+
+            if (obfuscatedName.equals(intermediaryName)) {
+                obfuscatedName = intermediaryName;
+            }
+
+            combined.putClass(obfuscatedName, entry.getValue());
+        }
+
+        // Preserve intermediary mappings without a named equivalent.
+        for (Map.Entry<String, String> entry : intermediary.getClassEntries()) {
+            String intermediaryName = entry.getValue();
+
+            if (named.mapClass(intermediaryName).equals(intermediaryName)) {
+                combined.putClass(entry.getKey(), intermediaryName);
+            }
+        }
+    }
+
+    private static void mergeFields(
+            IMapping combined,
+            IMapping intermediary,
+            IMapping named,
+            IMapping inverse
+    ) {
+        // Convert intermediary -> named into obfuscated -> named.
+        for (Map.Entry<String, String> entry : named.getFieldEntries()) {
+            String[] source = split(entry.getKey(), 2);
+            String[] target = split(entry.getValue(), 2);
+
+            String[] obfuscated = split(
+                    inverse.mapField(source[0], source[1]), 2
+            );
+
+            combined.putField(
+                    obfuscated[0],
+                    obfuscated[1],
+                    target[0],
+                    target[1]
+            );
+        }
+
+        // Preserve intermediary fields without a named equivalent.
+        for (Map.Entry<String, String> entry : intermediary.getFieldEntries()) {
+            String[] obfuscated = split(entry.getKey(), 2);
+            String[] intermediate = split(entry.getValue(), 2);
+
+            String mapped = named.mapField(intermediate[0], intermediate[1]);
+
+            if (mapped.equals(entry.getValue())) {
+                combined.putField(
+                        obfuscated[0],
+                        obfuscated[1],
+                        intermediate[0],
+                        intermediate[1]
+                );
+            }
+        }
+    }
+
+    private static void mergeMethods(
+            IMapping combined,
+            IMapping intermediary,
+            IMapping named,
+            IMapping inverse
+    ) {
+        // Convert intermediary -> named into obfuscated -> named.
+        for (Map.Entry<String, String> entry : named.getMethodEntries()) {
+            String[] source = split(entry.getKey(), 3);
+            String[] target = split(entry.getValue(), 3);
+
+            String[] obfuscated = split(
+                    inverse.mapMethod(source[0], source[1], source[2]), 3
+            );
+
+            combined.putMethod(
+                    obfuscated[0],
+                    obfuscated[1],
+                    obfuscated[2],
+                    target[0],
+                    target[1],
+                    target[2]
+            );
+        }
+
+        // Preserve intermediary methods without a named equivalent.
+        for (Map.Entry<String, String> entry : intermediary.getMethodEntries()) {
+            String[] obfuscated = split(entry.getKey(), 3);
+            String[] intermediate = split(entry.getValue(), 3);
+
+            String mapped = named.mapMethod(
+                    intermediate[0],
+                    intermediate[1],
+                    intermediate[2]
+            );
+
+            if (mapped.equals(entry.getValue())) {
+                combined.putMethod(
+                        obfuscated[0],
+                        obfuscated[1],
+                        obfuscated[2],
+                        intermediate[0],
+                        intermediate[1],
+                        intermediate[2]
+                );
+            }
+        }
+    }
+
+    /**
+     * Splits a mapping entry and validates its structure.
+     */
+    private static String[] split(String value, int expectedParts) {
+        String[] parts = value.split(SEPARATOR, -1);
+
+        if (parts.length != expectedParts) {
+            throw new IllegalArgumentException(
+                    "Malformed mapping entry: expected "
+                            + expectedParts + " components, got "
+                            + parts.length + ": " + value
+            );
+        }
+
+        return parts;
     }
 
     public static IMapping getMappings(Project project, String version) {
@@ -72,9 +184,18 @@ public class Mappings {
         return getMappings(intermediary, named);
     }
 
-    public static IMapping getMappings(Project project, VersionData versionData, MinecraftConfig config) {
-        IMapping intermediary = IntermediaryMappings.getMappings(project, versionData, config);
-        IMapping named = NamedMappings.getMappings(project, versionData, config);
+    public static IMapping getMappings(
+            Project project,
+            VersionData versionData,
+            MinecraftConfig config
+    ) {
+        IMapping intermediary = IntermediaryMappings.getMappings(
+                project, versionData, config
+        );
+
+        IMapping named = NamedMappings.getMappings(
+                project, versionData, config
+        );
 
         return getMappings(intermediary, named);
     }
