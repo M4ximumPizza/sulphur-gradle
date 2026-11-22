@@ -226,21 +226,48 @@ public class MinecraftSetup {
 
         System.out.println(
                 "Found '" + libraries.length + "/" + client.libraries.length +
-                        "' valid libraries for this os '" + OSUtil.osId + "'"
+                        "' valid libraries for this OS '" + OSUtil.osId +
+                        "' (" + OSUtil.ARCH_BITS + "-bit)"
         );
 
         applyManifestVersionConstraints(project, libraries);
 
         File nativeDir = FileUtil.getVersionNativesFolder(project, client.id);
         File libraryDir = FileUtil.getVersionLibsFolder(project, client.id);
-        File nativeMarker = new File(nativeDir, "i-wrote-natives-written.txt");
 
-        boolean extractNatives = !nativeMarker.isFile();
+        File nativeMarker = new File(nativeDir, ".native-architecture");
+
+        String architecture = OSUtil.osId + "-" + OSUtil.ARCH_BITS;
+
+        boolean extractNatives = true;
+
+        try {
+            if (nativeMarker.isFile()) {
+                String previousArchitecture = new String(
+                        Files.readAllBytes(nativeMarker.toPath()),
+                        StandardCharsets.UTF_8
+                );
+
+                extractNatives = !architecture.equals(previousArchitecture);
+            }
+
+            // Remove natives from a previous architecture.
+            if (extractNatives && nativeDir.exists()) {
+                clearDirectory(nativeDir);
+            }
+
+            if (!nativeDir.isDirectory() && !nativeDir.mkdirs()) {
+                throw new IOException("Could not create native directory: " + nativeDir);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to prepare native directory", e);
+        }
 
         List<Library> toBeRemapped = new ArrayList<>();
 
         for (Library library : libraries) {
-            if (library.downloads.artifact != null) {
+            if (library.downloads != null && library.downloads.artifact != null) {
                 if (library.name.contains("com.mojang")) {
                     toBeRemapped.add(library);
                 } else {
@@ -255,13 +282,14 @@ public class MinecraftSetup {
                 continue;
             }
 
-            if (library.getNativeArtifactId() == null) {
+            // Resolve the architecture-specific native artifact.
+            Artifact artifact = library.getNativeArtifact();
+
+            if (artifact == null) {
                 continue;
             }
 
-            Artifact artifact = library.getNativeArtifact();
             String filename = new File(artifact.url.getFile()).getName();
-
             File nativeJar = new File(libraryDir, filename);
 
             try {
@@ -280,19 +308,21 @@ public class MinecraftSetup {
                 extract(project, library, client, nativeJar);
 
             } catch (IOException e) {
-                throw new RuntimeException("Failed to process native library: " + filename, e);
+                throw new RuntimeException(
+                        "Failed to process native library: " + filename, e
+                );
             }
         }
 
+        // Only write the marker after every native has been extracted.
         if (extractNatives) {
             try {
-                if (!nativeDir.isDirectory() && !nativeDir.mkdirs()) {
-                    throw new IOException("Could not create native directory: " + nativeDir);
-                }
-
-                Files.createFile(nativeMarker.toPath());
+                Files.write(
+                        nativeMarker.toPath(),
+                        architecture.getBytes(StandardCharsets.UTF_8)
+                );
             } catch (IOException e) {
-                throw new RuntimeException("Failed to create native extraction marker", e);
+                throw new RuntimeException("Failed to write native marker", e);
             }
         }
 
@@ -357,5 +387,28 @@ public class MinecraftSetup {
         }
 
         return false;
+    }
+
+    private static void clearDirectory(File directory) throws IOException {
+        if (!directory.exists()) {
+            return;
+        }
+
+        try (java.util.stream.Stream<java.nio.file.Path> paths =
+                     Files.walk(directory.toPath())) {
+
+            paths.sorted(java.util.Comparator.reverseOrder())
+                    .filter(path -> !path.equals(directory.toPath()))
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            throw new java.io.UncheckedIOException(e);
+                        }
+                    });
+
+        } catch (java.io.UncheckedIOException e) {
+            throw e.getCause();
+        }
     }
 }
