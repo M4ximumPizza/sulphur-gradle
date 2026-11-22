@@ -1,7 +1,6 @@
-# Slime - gradle for puzzle on minecraft development
+# Sulphur Gradle - Dev environment for Puzzle on Minecraft
 
-- Currently `gibberish-definer` has to be built local
-- To test out the 'test-project' run `publishToMavenLocal` on 'slime' and refresh 'test-project'
+- To use `test-project` you may want to link its `build.gradle` in intellij
 
 ### Todo
 - [ ] Add support for access widening and .inject files in the gradle transformer for dependencies and the client.
