@@ -1,8 +1,8 @@
-import dev.puzzleshq.slime.minecraft.manifest.Latest;
-import dev.puzzleshq.slime.minecraft.manifest.Version;
-import dev.puzzleshq.slime.minecraft.manifest.VersionManifest;
+import dev.puzzleshq.sulphur.minecraft.manifest.Latest;
+import dev.puzzleshq.sulphur.minecraft.manifest.Version;
+import dev.puzzleshq.sulphur.minecraft.manifest.VersionManifest;
 
-import static dev.puzzleshq.slime.VersionResolver.GSON_LOCAL;
+import static dev.puzzleshq.sulphur.VersionResolver.GSON_LOCAL;
 
 public class Test {
 

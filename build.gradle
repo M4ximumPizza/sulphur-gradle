@@ -10,7 +10,6 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    mavenLocal()
     maven {
         name = 'Fabric'
         url = 'https://maven.fabricmc.net/'
@@ -54,9 +53,9 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        slime_plugin {
-            id = 'slime-core'
-            implementationClass = 'dev.puzzleshq.slime.SlimePlugin'
+        sulphur_plugin {
+            id = 'sulphur'
+            implementationClass = 'dev.puzzleshq.sulphur.SulphurPlugin'
         }
     }
 }
